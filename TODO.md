@@ -1,0 +1,13 @@
+- [x] založit databázi
+- [x] vytvořit základní tabulky
+- [x] vložit admin uživatele
+- [x] vložit testovací hru
+- [x] vložit první týmy
+- [x] vložit první POI
+- [x] vytvořit strukturu projektu
+- [x] připojení k DB v PHP
+- [x] admin login
+- [x] seznam her
+- [ ] formulář založení hry
+- [ ] detail hry
+- [ ] editor POI

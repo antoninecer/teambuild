@@ -1,0 +1,156 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers\Admin;
+
+use App\Repositories\GameRepository;
+
+final class GameController
+{
+    private function requireAdmin(): array
+    {
+        session_start();
+
+        if (!isset($_SESSION['admin_user'])) {
+            header('Location: /admin/login');
+            exit;
+        }
+
+        return $_SESSION['admin_user'];
+    }
+
+    public function index(): void
+    {
+        $this->requireAdmin();
+
+        $repo = new GameRepository();
+        $games = $repo->all();
+
+        require __DIR__ . '/../../../resources/views/admin/games/index.php';
+    }
+
+    public function createForm(): void
+    {
+        $this->requireAdmin();
+
+        $old = $_SESSION['game_form_old'] ?? [];
+        $errors = $_SESSION['game_form_errors'] ?? [];
+
+        unset($_SESSION['game_form_old'], $_SESSION['game_form_errors']);
+
+        require __DIR__ . '/../../../resources/views/admin/games/create.php';
+    }
+
+    public function store(): void
+    {
+        $adminUser = $this->requireAdmin();
+
+        $name = trim($_POST['name'] ?? '');
+        $slug = trim($_POST['slug'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $introText = trim($_POST['intro_text'] ?? '');
+        $startsAt = trim($_POST['starts_at'] ?? '');
+        $endsAt = trim($_POST['ends_at'] ?? '');
+        $status = trim($_POST['status'] ?? 'draft');
+        $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
+        $mapCenterLat = trim($_POST['map_center_lat'] ?? '');
+        $mapCenterLon = trim($_POST['map_center_lon'] ?? '');
+        $mapDefaultZoom = trim($_POST['map_default_zoom'] ?? '14');
+        $sessionCookieDays = trim($_POST['session_cookie_days'] ?? '365');
+
+        $errors = [];
+
+        if ($name === '') {
+            $errors[] = 'Název hry je povinný.';
+        }
+
+        if ($slug === '') {
+            $errors[] = 'Slug je povinný.';
+        } elseif (!preg_match('~^[a-z0-9-]+$~', $slug)) {
+            $errors[] = 'Slug smí obsahovat jen malá písmena, čísla a pomlčky.';
+        }
+
+        if ($startsAt === '') {
+            $errors[] = 'Začátek je povinný.';
+        }
+
+        if ($endsAt === '') {
+            $errors[] = 'Konec je povinný.';
+        }
+
+        if ($startsAt !== '' && $endsAt !== '' && strtotime($startsAt) > strtotime($endsAt)) {
+            $errors[] = 'Začátek nesmí být později než konec.';
+        }
+
+        $allowedStatuses = ['draft', 'registration_open', 'active', 'finished', 'archived'];
+        if (!in_array($status, $allowedStatuses, true)) {
+            $errors[] = 'Neplatný stav hry.';
+        }
+
+        $repo = new GameRepository();
+
+        if ($slug !== '' && $repo->existsBySlug($slug)) {
+            $errors[] = 'Slug už existuje.';
+        }
+
+        if ($mapCenterLat !== '' && !is_numeric($mapCenterLat)) {
+            $errors[] = 'Latitude středu mapy musí být číslo.';
+        }
+
+        if ($mapCenterLon !== '' && !is_numeric($mapCenterLon)) {
+            $errors[] = 'Longitude středu mapy musí být číslo.';
+        }
+
+        if (!ctype_digit((string) $mapDefaultZoom)) {
+            $errors[] = 'Zoom musí být celé číslo.';
+        }
+
+        if (!ctype_digit((string) $sessionCookieDays) || (int) $sessionCookieDays < 1) {
+            $errors[] = 'Délka cookie musí být kladné celé číslo.';
+        }
+
+        if ($errors !== []) {
+            $_SESSION['game_form_errors'] = $errors;
+            $_SESSION['game_form_old'] = $_POST;
+            header('Location: /admin/games/create');
+            exit;
+        }
+
+        $gameId = $repo->create([
+            'name' => $name,
+            'slug' => $slug,
+            'description' => $description !== '' ? $description : null,
+            'intro_text' => $introText !== '' ? $introText : null,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'registration_enabled' => $registrationEnabled,
+            'status' => $status,
+            'map_center_lat' => $mapCenterLat !== '' ? (float) $mapCenterLat : null,
+            'map_center_lon' => $mapCenterLon !== '' ? (float) $mapCenterLon : null,
+            'map_default_zoom' => (int) $mapDefaultZoom,
+            'session_cookie_days' => (int) $sessionCookieDays,
+            'created_by' => (int) $adminUser['id'],
+        ]);
+
+        header('Location: /admin/games/' . $gameId);
+        exit;
+    }
+
+    public function show(int $id): void
+    {
+        $this->requireAdmin();
+
+        $repo = new GameRepository();
+        $game = $repo->findById($id);
+
+        if (!$game) {
+            http_response_code(404);
+            echo 'Hra nebyla nalezena.';
+            exit;
+        }
+
+        require __DIR__ . '/../../../resources/views/admin/games/show.php';
+    }
+}
+
