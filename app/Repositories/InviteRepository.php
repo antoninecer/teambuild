@@ -6,189 +6,9 @@ namespace App\Repositories;
 
 use App\Support\Database;
 
-final class PlayerRepository
+final class InviteRepository
 {
     /**
-     * @param array $data
-     * @return int
-     */
-    public function create(array $data): int
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'INSERT INTO players (
-                game_id,
-                team_id,
-                invite_id,
-                nickname,
-                registered_at,
-                status
-            ) VALUES (
-                :game_id,
-                :team_id,
-                :invite_id,
-                :nickname,
-                NOW(),
-                :status
-            )'
-        );
-
-        $stmt->execute([
-            'game_id' => $data['game_id'],
-            'team_id' => $data['team_id'] ?? null,
-            'invite_id' => $data['invite_id'] ?? null,
-            'nickname' => $data['nickname'],
-            'status' => $data['status'] ?? 'active',
-        ]);
-
-        return (int) $pdo->lastInsertId();
-    }
-
-    /**
-     * @param string $nickname
-     * @param int $gameId
-     * @return array|null
-     */
-    public function findByNicknameInGame(string $nickname, int $gameId): ?array
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'SELECT *
-             FROM players
-             WHERE nickname = :nickname
-               AND game_id = :game_id
-             LIMIT 1'
-        );
-
-        $stmt->execute([
-            'nickname' => $nickname,
-            'game_id' => $gameId,
-        ]);
-
-        $player = $stmt->fetch();
-
-        return $player ?: null;
-    }
-
-    /**
-     * @param int $id
-     * @return array|null
-     */
-    public function findById(int $id): ?array
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'SELECT *
-             FROM players
-             WHERE id = :id
-             LIMIT 1'
-        );
-
-        $stmt->execute(['id' => $id]);
-        $player = $stmt->fetch();
-
-        return $player ?: null;
-    }
-
-    /**
-     * @param int $playerId
-     * @param float $lat
-     * @param float $lon
-     * @param float $accuracy
-     * @return void
-     */
-    public function updateLocation(int $playerId, float $lat, float $lon, float $accuracy): void
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'UPDATE players
-             SET last_lat = :lat,
-                 last_lon = :lon,
-                 last_accuracy = :accuracy,
-                 last_seen_at = NOW()
-             WHERE id = :id'
-        );
-
-        $stmt->execute([
-            'id' => $playerId,
-            'lat' => $lat,
-            'lon' => $lon,
-            'accuracy' => $accuracy,
-        ]);
-    }
-
-    /**
-     * @param int $playerId
-     * @param float $lat
-     * @param float $lon
-     * @param float $accuracy
-     * @return void
-     */
-    public function logLocation(int $playerId, float $lat, float $lon, float $accuracy): void
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'INSERT INTO location_log (
-                player_id,
-                lat,
-                lon,
-                accuracy,
-                created_at
-            ) VALUES (
-                :player_id,
-                :lat,
-                :lon,
-                :accuracy,
-                NOW()
-            )'
-        );
-
-        $stmt->execute([
-            'player_id' => $playerId,
-            'lat' => $lat,
-            'lon' => $lon,
-            'accuracy' => $accuracy,
-        ]);
-    }
-
-    /**
-     * @param int $playerId
-     * @param string $tokenHash
-     * @param string $expiresAt
-     * @return void
-     */
-    public function createSession(int $playerId, string $tokenHash, string $expiresAt): void
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'INSERT INTO player_sessions (
-                player_id,
-                token_hash,
-                expires_at,
-                created_at
-            ) VALUES (
-                :player_id,
-                :token_hash,
-                :expires_at,
-                NOW()
-            )'
-        );
-
-        $stmt->execute([
-            'player_id' => $playerId,
-            'token_hash' => $tokenHash,
-            'expires_at' => $expiresAt,
-        ]);
-    }
-
-    /**
-     * @param int $gameId
      * @return array<int, array>
      */
     public function allForGame(int $gameId): array
@@ -196,13 +16,11 @@ final class PlayerRepository
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'SELECT
-                p.*,
-                t.name AS team_name
-             FROM players p
-             LEFT JOIN teams t ON p.team_id = t.id
-             WHERE p.game_id = :game_id
-             ORDER BY p.id DESC'
+            'SELECT i.*, t.name AS team_name
+             FROM game_invites i
+             LEFT JOIN teams t ON i.team_id = t.id
+             WHERE i.game_id = :game_id
+             ORDER BY i.id DESC'
         );
 
         $stmt->execute(['game_id' => $gameId]);
@@ -210,33 +28,102 @@ final class PlayerRepository
         return $stmt->fetchAll();
     }
 
-    /**
-     * @param string $tokenHash
-     * @return array|null
-     */
-    public function findBySessionToken(string $tokenHash): ?array
+    public function findById(int $id): ?array
     {
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'SELECT
-                ps.player_id,
-                ps.token_hash,
-                ps.expires_at,
-                p.*,
-                g.name AS game_name,
-                g.status AS game_status,
-                g.slug AS game_slug
-             FROM player_sessions ps
-             JOIN players p ON ps.player_id = p.id
-             JOIN games g ON p.game_id = g.id
-             WHERE ps.token_hash = :token_hash
+            'SELECT *
+             FROM game_invites
+             WHERE id = :id
              LIMIT 1'
         );
 
-        $stmt->execute(['token_hash' => $tokenHash]);
-        $session = $stmt->fetch();
+        $stmt->execute(['id' => $id]);
+        $invite = $stmt->fetch();
 
-        return $session ?: null;
+        return $invite ?: null;
+    }
+
+    public function findByCode(string $code): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT *
+             FROM game_invites
+             WHERE code = :code
+             LIMIT 1'
+        );
+
+        $stmt->execute(['code' => $code]);
+        $invite = $stmt->fetch();
+
+        return $invite ?: null;
+    }
+
+    public function create(array $data): int
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO game_invites (
+                game_id,
+                code,
+                label,
+                team_id,
+                max_uses,
+                used_count,
+                valid_from,
+                valid_to,
+                is_active
+            ) VALUES (
+                :game_id,
+                :code,
+                :label,
+                :team_id,
+                :max_uses,
+                :used_count,
+                :valid_from,
+                :valid_to,
+                :is_active
+            )'
+        );
+
+        $stmt->execute([
+            'game_id' => $data['game_id'],
+            'code' => $data['code'],
+            'label' => $data['label'] ?? null,
+            'team_id' => $data['team_id'] ?? null,
+            'max_uses' => array_key_exists('max_uses', $data) ? $data['max_uses'] : null,
+            'used_count' => $data['used_count'] ?? 0,
+            'valid_from' => $data['valid_from'] ?? null,
+            'valid_to' => $data['valid_to'] ?? null,
+            'is_active' => (int) ($data['is_active'] ?? 1),
+        ]);
+
+        return (int) $pdo->lastInsertId();
+    }
+
+    public function delete(int $id): bool
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare('DELETE FROM game_invites WHERE id = :id');
+
+        return $stmt->execute(['id' => $id]);
+    }
+
+    public function incrementUsage(int $id): void
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'UPDATE game_invites
+             SET used_count = used_count + 1
+             WHERE id = :id'
+        );
+
+        $stmt->execute(['id' => $id]);
     }
 }
