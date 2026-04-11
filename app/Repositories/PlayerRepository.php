@@ -8,10 +8,6 @@ use App\Support\Database;
 
 final class PlayerRepository
 {
-    /**
-     * @param array $data
-     * @return int
-     */
     public function create(array $data): int
     {
         $pdo = Database::connection();
@@ -22,17 +18,15 @@ final class PlayerRepository
                 team_id,
                 invite_id,
                 nickname,
-                status,
-                created_at,
-                updated_at
+                registered_at,
+                status
             ) VALUES (
                 :game_id,
                 :team_id,
                 :invite_id,
                 :nickname,
-                :status,
                 NOW(),
-                NOW()
+                :status
             )'
         );
 
@@ -47,71 +41,16 @@ final class PlayerRepository
         return (int) $pdo->lastInsertId();
     }
 
-    /**
-     * @param string $nickname
-     * @param int $gameId
-     * @return array|null
-     */
-    public function findByNicknameInGame(string $nickname, int $gameId): ?array
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'SELECT *
-             FROM players
-             WHERE nickname = :nickname AND game_id = :game_id
-             LIMIT 1'
-        );
-
-        $stmt->execute([
-            'nickname' => $nickname,
-            'game_id' => $gameId,
-        ]);
-
-        $player = $stmt->fetch();
-
-        return $player ?: null;
-    }
-
-    /**
-     * @param int $id
-     * @return array|null
-     */
-    public function findById(int $id): ?array
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'SELECT *
-             FROM players
-             WHERE id = :id
-             LIMIT 1'
-        );
-
-        $stmt->execute(['id' => $id]);
-        $player = $stmt->fetch();
-
-        return $player ?: null;
-    }
-
-    /**
-     * @param int $playerId
-     * @param float $lat
-     * @param float $lon
-     * @param float $accuracy
-     * @return void
-     */
     public function updateLocation(int $playerId, float $lat, float $lon, float $accuracy): void
     {
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
             'UPDATE players
-             SET lat = :lat,
-                 lon = :lon,
-                 accuracy = :accuracy,
-                 last_seen_at = NOW(),
-                 updated_at = NOW()
+             SET last_lat = :lat,
+                 last_lon = :lon,
+                 last_accuracy = :accuracy,
+                 last_seen_at = NOW()
              WHERE id = :id'
         );
 
@@ -123,13 +62,6 @@ final class PlayerRepository
         ]);
     }
 
-    /**
-     * @param int $playerId
-     * @param float $lat
-     * @param float $lon
-     * @param float $accuracy
-     * @return void
-     */
     public function logLocation(int $playerId, float $lat, float $lon, float $accuracy): void
     {
         $pdo = Database::connection();
@@ -158,12 +90,6 @@ final class PlayerRepository
         ]);
     }
 
-    /**
-     * @param int $playerId
-     * @param string $tokenHash
-     * @param string $expiresAt
-     * @return void
-     */
     public function createSession(int $playerId, string $tokenHash, string $expiresAt): void
     {
         $pdo = Database::connection();
@@ -189,47 +115,16 @@ final class PlayerRepository
         ]);
     }
 
-    /**
-     * @param int $gameId
-     * @return array
-     */
-    public function allForGame(int $gameId): array
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'SELECT 
-                p.*,
-                p.lat AS last_lat,
-                p.lon AS last_lon,
-                p.accuracy AS last_accuracy,
-                p.last_seen_at,
-                t.name AS team_name
-             FROM players p
-             LEFT JOIN teams t ON p.team_id = t.id
-             WHERE p.game_id = :game_id'
-        );
-
-        $stmt->execute(['game_id' => $gameId]);
-
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * @param string $tokenHash
-     * @return array|null
-     */
     public function findBySessionToken(string $tokenHash): ?array
     {
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'SELECT 
+            'SELECT
+                ps.player_id,
                 ps.token_hash,
                 ps.expires_at,
                 p.*,
-                g.name AS game_name,
-                g.status AS game_status,
                 g.slug AS game_slug
              FROM player_sessions ps
              JOIN players p ON ps.player_id = p.id
@@ -239,8 +134,6 @@ final class PlayerRepository
         );
 
         $stmt->execute(['token_hash' => $tokenHash]);
-        $session = $stmt->fetch();
-
-        return $session ?: null;
+        return $stmt->fetch() ?: null;
     }
 }
