@@ -41,6 +41,46 @@ final class PlayerRepository
         return (int) $pdo->lastInsertId();
     }
 
+    public function findByNicknameInGame(string $nickname, int $gameId): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT *
+             FROM players
+             WHERE nickname = :nickname
+               AND game_id = :game_id
+             LIMIT 1'
+        );
+
+        $stmt->execute([
+            'nickname' => $nickname,
+            'game_id' => $gameId,
+        ]);
+
+        $player = $stmt->fetch();
+
+        return $player ?: null;
+    }
+
+    public function findById(int $id): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT *
+             FROM players
+             WHERE id = :id
+             LIMIT 1'
+        );
+
+        $stmt->execute(['id' => $id]);
+
+        $player = $stmt->fetch();
+
+        return $player ?: null;
+    }
+
     public function updateLocation(int $playerId, float $lat, float $lon, float $accuracy): void
     {
         $pdo = Database::connection();
@@ -115,6 +155,25 @@ final class PlayerRepository
         ]);
     }
 
+    public function allForGame(int $gameId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT
+                p.*,
+                t.name AS team_name
+             FROM players p
+             LEFT JOIN teams t ON p.team_id = t.id
+             WHERE p.game_id = :game_id
+             ORDER BY p.id DESC'
+        );
+
+        $stmt->execute(['game_id' => $gameId]);
+
+        return $stmt->fetchAll();
+    }
+
     public function findBySessionToken(string $tokenHash): ?array
     {
         $pdo = Database::connection();
@@ -125,6 +184,8 @@ final class PlayerRepository
                 ps.token_hash,
                 ps.expires_at,
                 p.*,
+                g.name AS game_name,
+                g.status AS game_status,
                 g.slug AS game_slug
              FROM player_sessions ps
              JOIN players p ON ps.player_id = p.id
@@ -134,6 +195,9 @@ final class PlayerRepository
         );
 
         $stmt->execute(['token_hash' => $tokenHash]);
-        return $stmt->fetch() ?: null;
+
+        $session = $stmt->fetch();
+
+        return $session ?: null;
     }
 }
