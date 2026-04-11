@@ -52,10 +52,8 @@ final class PlayerController
             }
         }
 
-        // 👉 TADY JE DŮLEŽITÁ OPRAVA
         $inviteCode = $_GET['invite'] ?? '';
 
-        // pokud přijde invite, uložíme ho do session
         if ($inviteCode !== '') {
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
@@ -68,6 +66,10 @@ final class PlayerController
 
     public function register(string $slug): void
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $game = $this->gameRepo->findBySlug($slug);
 
         if (!$game) {
@@ -83,11 +85,8 @@ final class PlayerController
         }
 
         $nickname = trim($_POST['nickname'] ?? '');
-
-        // 👉 hlavní změna
         $inviteCode = trim($_POST['invite_code'] ?? '');
 
-        // fallback ze session
         if ($inviteCode === '' && isset($_SESSION['invite_code'])) {
             $inviteCode = $_SESSION['invite_code'];
         }
@@ -134,7 +133,6 @@ final class PlayerController
             $this->inviteRepo->incrementUsage((int)$invite['id']);
         }
 
-        // SESSION TOKEN
         $token = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $token);
         $expiresAt = date('Y-m-d H:i:s', time() + 365 * 24 * 60 * 60);
@@ -143,10 +141,6 @@ final class PlayerController
 
         setcookie('player_session', $token, time() + 365 * 24 * 60 * 60, '/');
 
-        // vyčistíme invite ze session
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
         unset($_SESSION['invite_code']);
 
         header("Location: /game/" . $game['slug']);
@@ -173,8 +167,8 @@ final class PlayerController
         $lon = (float) ($data['lon'] ?? 0);
         $accuracy = (float) ($data['accuracy'] ?? 0);
 
-        $this->playerRepo->updateLocation((int)$session['id'], $lat, $lon, $accuracy);
-        $this->playerRepo->logLocation((int)$session['id'], $lat, $lon, $accuracy);
+        $this->playerRepo->updateLocation((int)$session['player_id'], $lat, $lon, $accuracy);
+        $this->playerRepo->logLocation((int)$session['player_id'], $lat, $lon, $accuracy);
 
         echo json_encode(['success' => true]);
     }
@@ -191,7 +185,7 @@ final class PlayerController
 
         $this->helpRepo->create([
             'game_id' => $session['game_id'],
-            'player_id' => $session['id'],
+            'player_id' => $session['player_id'],
             'team_id' => $session['team_id'] ?? null,
             'lat' => (float) ($data['lat'] ?? 0),
             'lon' => (float) ($data['lon'] ?? 0),
