@@ -17,7 +17,7 @@ final class InviteRepository
 
         $stmt = $pdo->prepare(
             'SELECT i.*, t.name AS team_name
-             FROM invites i
+             FROM game_invites i
              LEFT JOIN teams t ON i.team_id = t.id
              WHERE i.game_id = :game_id
              ORDER BY i.id DESC'
@@ -34,7 +34,7 @@ final class InviteRepository
 
         $stmt = $pdo->prepare(
             'SELECT *
-             FROM invites
+             FROM game_invites
              WHERE id = :id
              LIMIT 1'
         );
@@ -51,7 +51,7 @@ final class InviteRepository
 
         $stmt = $pdo->prepare(
             'SELECT *
-             FROM invites
+             FROM game_invites
              WHERE code = :code
              LIMIT 1'
         );
@@ -67,7 +67,7 @@ final class InviteRepository
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'INSERT INTO invites (
+            'INSERT INTO game_invites (
                 game_id,
                 code,
                 label,
@@ -95,7 +95,7 @@ final class InviteRepository
             'code' => $data['code'],
             'label' => $data['label'] ?? null,
             'team_id' => $data['team_id'] ?? null,
-            'max_uses' => array_key_exists('max_uses', $data) ? $data['max_uses'] : 1,
+            'max_uses' => array_key_exists('max_uses', $data) ? $data['max_uses'] : null,
             'used_count' => $data['used_count'] ?? 0,
             'valid_from' => $data['valid_from'] ?? null,
             'valid_to' => $data['valid_to'] ?? null,
@@ -109,7 +109,7 @@ final class InviteRepository
     {
         $pdo = Database::connection();
 
-        $stmt = $pdo->prepare('DELETE FROM invites WHERE id = :id');
+        $stmt = $pdo->prepare('DELETE FROM game_invites WHERE id = :id');
 
         return $stmt->execute(['id' => $id]);
     }
@@ -119,7 +119,7 @@ final class InviteRepository
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'UPDATE invites
+            'UPDATE game_invites
              SET used_count = used_count + 1
              WHERE id = :id'
         );
