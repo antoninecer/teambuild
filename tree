@@ -1,0 +1,65 @@
+.
+├── app
+│   ├── Controllers
+│   │   ├── Admin
+│   │   │   ├── AuthController.php
+│   │   │   ├── GameController.php
+│   │   │   ├── InviteController.php
+│   │   │   └── PoiController.php
+│   │   ├── Api
+│   │   └── Player
+│   │       └── PlayerController.php
+│   ├── Middleware
+│   ├── Models
+│   ├── Repositories
+│   │   ├── GameRepository.php
+│   │   ├── HelpRepository.php
+│   │   ├── InviteRepository.php
+│   │   ├── PlayerRepository.php
+│   │   ├── PoiRepository.php
+│   │   ├── TeamRepository.php
+│   │   └── UserRepository.php
+│   ├── Services
+│   └── Support
+│       └── Database.php
+├── config
+│   └── database.php
+├── database
+│   ├── migrations
+│   └── seeds
+├── GEMINI.md
+├── popis.txt
+├── public
+│   ├── assets
+│   ├── index.php
+│   ├── infude
+│   └── uploads
+├── README.md
+├── resources
+│   ├── css
+│   ├── js
+│   └── views
+│       ├── admin
+│       │   ├── games
+│       │   │   ├── create.php
+│       │   │   ├── index.php
+│       │   │   └── show.php
+│       │   ├── invites
+│       │   │   ├── create.php
+│       │   │   └── index.php
+│       │   ├── login.php
+│       │   └── pois
+│       │       ├── create.php
+│       │       ├── edit.php
+│       │       └── index.php
+│       └── player
+│           ├── dashboard.php
+│           └── register.php
+├── routes
+├── storage
+│   ├── logs
+│   └── qr
+├── TODO.md
+└── tree
+
+31 directories, 32 files

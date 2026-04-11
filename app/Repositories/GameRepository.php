@@ -54,6 +54,23 @@ final class GameRepository
         return (bool) $stmt->fetch();
     }
 
+    public function findBySlug(string $slug): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT *
+             FROM games
+             WHERE slug = :slug
+             LIMIT 1'
+        );
+
+        $stmt->execute(['slug' => $slug]);
+        $game = $stmt->fetch();
+
+        return $game ?: null;
+    }
+
     public function create(array $data): int
     {
         $pdo = Database::connection();

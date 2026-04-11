@@ -8,6 +8,14 @@
 - [x] připojení k DB v PHP
 - [x] admin login
 - [x] seznam her
-- [ ] formulář založení hry
-- [ ] detail hry
-- [ ] editor POI
+- [x] formulář založení hry
+- [x] detail hry
+- [x] editor POI
+- [x] pozvánky + QR
+- [x] registrace hráče (backend)
+- [x] API pro polohu (backend)
+- [x] API pro žádost o pomoc (backend)
+- [x] registrace hráče (frontend)
+- [ ] admin sledování hráčů na mapě
+- [ ] help systém (zpracování v adminu)
+- [ ] výsledky (tabulky)

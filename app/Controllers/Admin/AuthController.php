@@ -10,12 +10,18 @@ final class AuthController
 {
     public function showLogin(): void
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         require __DIR__ . '/../../../resources/views/admin/login.php';
     }
 
     public function login(): void
     {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -35,26 +41,47 @@ final class AuthController
             exit;
         }
 
-        if (!in_array($user['role'], ['admin', 'editor'], true)) {
+        if (!in_array($user['role'], ['admin', 'editor', 'viewer'], true)) {
             $_SESSION['admin_error'] = 'Nemáš oprávnění pro vstup do administrace.';
             header('Location: /admin/login');
             exit;
         }
 
+        $repo->touchLastLogin((int) $user['id']);
+
         $_SESSION['admin_user'] = [
             'id' => (int) $user['id'],
             'username' => $user['username'],
+            'email' => $user['email'] ?? null,
             'role' => $user['role'],
+            'global_role' => $user['global_role'] ?? 'none',
         ];
 
-        header('Location: /admin/games');
+        header('Location: /admin');
         exit;
     }
 
     public function logout(): void
     {
-        session_start();
-        unset($_SESSION['admin_user']);
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $_SESSION = [];
+
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params['path'],
+                $params['domain'],
+                (bool) $params['secure'],
+                (bool) $params['httponly']
+            );
+        }
+
         session_destroy();
 
         header('Location: /admin/login');
