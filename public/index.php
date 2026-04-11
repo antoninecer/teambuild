@@ -12,6 +12,7 @@ require __DIR__ . '/../app/Repositories/PoiRepository.php';
 require __DIR__ . '/../app/Repositories/InviteRepository.php';
 require __DIR__ . '/../app/Repositories/TeamRepository.php';
 require __DIR__ . '/../app/Repositories/PlayerRepository.php';
+require __DIR__ . '/../app/Repositories/HelpRepository.php';
 
 // Controllers - Admin
 require __DIR__ . '/../app/Controllers/Admin/AuthController.php';
