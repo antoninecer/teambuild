@@ -7,6 +7,6 @@ return [
     'port' => 3306,
     'database' => 'teambuild',
     'username' => 'teambuild',
-    'password' => 'silne_heslo_sem',
+    'password' => 'SemDejSilneServeroveHeslo!',
     'charset' => 'utf8mb4',
 ];
