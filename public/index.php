@@ -3,27 +3,27 @@
 declare(strict_types=1);
 
 // Core
-require __DIR__ . '/../app/Support/Database.php';
+require_once __DIR__ . '/../app/Support/Database.php';
 
 // Repositories
-require __DIR__ . '/../app/Repositories/UserRepository.php';
-require __DIR__ . '/../app/Repositories/GameRepository.php';
-require __DIR__ . '/../app/Repositories/PoiRepository.php';
-require __DIR__ . '/../app/Repositories/InviteRepository.php';
-require __DIR__ . '/../app/Repositories/TeamRepository.php';
-require __DIR__ . '/../app/Repositories/PlayerRepository.php';
-require __DIR__ . '/../app/Repositories/HelpRepository.php';
+require_once __DIR__ . '/../app/Repositories/UserRepository.php';
+require_once __DIR__ . '/../app/Repositories/GameRepository.php';
+require_once __DIR__ . '/../app/Repositories/PoiRepository.php';
+require_once __DIR__ . '/../app/Repositories/InviteRepository.php';
+require_once __DIR__ . '/../app/Repositories/TeamRepository.php';
+require_once __DIR__ . '/../app/Repositories/PlayerRepository.php';
+require_once __DIR__ . '/../app/Repositories/HelpRepository.php';
 
 // Controllers - Admin
-require __DIR__ . '/../app/Controllers/Admin/AuthController.php';
-require __DIR__ . '/../app/Controllers/Admin/DashboardController.php';
-require __DIR__ . '/../app/Controllers/Admin/GameController.php';
-require __DIR__ . '/../app/Controllers/Admin/PoiController.php';
-require __DIR__ . '/../app/Controllers/Admin/InviteController.php';
-require __DIR__ . '/../app/Controllers/Admin/UserController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/AuthController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/DashboardController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/GameController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/PoiController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/InviteController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/UserController.php';
 
 // Controllers - Player
-require __DIR__ . '/../app/Controllers/Player/PlayerController.php';
+require_once __DIR__ . '/../app/Controllers/Player/PlayerController.php';
 
 use App\Controllers\Admin\AuthController;
 use App\Controllers\Admin\DashboardController;
