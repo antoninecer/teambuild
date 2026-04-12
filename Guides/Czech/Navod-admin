@@ -1,0 +1,29 @@
+Tato hra funguje v mobilním telefonu přes webový prohlížeč a používá polohu hráče (GPS). Aby hra správně odemykala body, poklady a další obsah, musí mít hráč v telefonu povolený přístup k poloze.
+
+Jak správně připravit hru:
+
+1. Založte hru a nastavte období, ve kterém má být dostupná.
+2. Povolte registraci hráčů, pokud se mají účastníci přihlašovat průběžně.
+3. Přidejte body hry (POI) na mapu.
+   - Kliknutím do mapy nastavíte přesné místo.
+   - U každého bodu můžete vyplnit název, příběh, typ bodu a radius.
+   - Radius určuje, jak blízko musí hráč přijít, aby hra poznala, že dorazil na místo.
+4. Podle potřeby přidejte poklady.
+   - Poklad je samostatný herní objekt.
+   - Může být navázaný na konkrétní bod, nebo může být umístěn samostatně.
+   - Poklad může být viditelný na mapě, nebo skrytý.
+   - Limit sebrání určuje, kolikrát může být poklad celkem získán.
+5. Vytvořte pozvánky nebo použijte veřejný odkaz na hru.
+6. Hráči po otevření hry musí povolit přístup k poloze v prohlížeči.
+   Bez GPS nebude hra správně fungovat.
+
+Doporučení pro správce:
+- Pro testování je vhodné založit dlouhodobou testovací hru.
+- Body i poklady je nejlepší umisťovat přímo klikáním do mapy.
+- Ve městě může GPS kolísat, proto je vhodné nastavit rozumný radius, obvykle 20 až 60 metrů podle typu místa.
+- Pokud se hra používá bez organizátora, dbejte na jasné instrukce pro hráče v úvodním textu.
+
+Shrnutí:
+Body (POI) určují trasu a příběh.
+Poklady přidávají herní prvek a mohou být sbírané jednotlivci nebo týmy.
+Bez povolené polohy v telefonu hráče se hra neodemkne správně.

@@ -1,136 +1,169 @@
 # TODO
 
 ## Hotovo
-- [x] založit databázi
-- [x] vytvořit základní tabulky
-- [x] vložit admin uživatele
-- [x] vložit testovací hru
-- [x] vložit první týmy
-- [x] vložit první POI
-- [x] vytvořit strukturu projektu
-- [x] připojení k DB v PHP
-- [x] admin login
-- [x] admin dashboard
-- [x] seznam her
-- [x] formulář založení hry
-- [x] detail hry
-- [x] editor POI
+- [x] databáze + základní tabulky
+- [x] admin uživatel
+- [x] testovací hra
+- [x] týmy
+- [x] POI (body)
+- [x] struktura projektu
+- [x] DB připojení (PHP)
+- [x] admin login + dashboard
+- [x] seznam her + detail
+- [x] vytvoření hry
+- [x] editor POI (včetně mapy)
 - [x] pozvánky + QR / link
-- [x] registrace hráče (backend)
-- [x] registrace hráče (frontend)
-- [x] player session cookie
-- [x] dashboard hráče
-- [x] API pro polohu (backend)
-- [x] API pro žádost o pomoc (backend)
-- [x] základ správy uživatelů administrace
-- [x] nasazení na play.rightdone.eu
-- [x] HTTPS / certifikát
-- [x] základní invite flow do hry
-- [x] přepínač režimu hry: samostatná / s organizátorem
-- [x] přidat do DB sloupec `operation_mode`
-- [x] default nastavit na `self_service`
-- [x] podporované hodnoty:
-  - [x] `self_service`
-  - [x] `moderated`
-- [x] upravit `GameRepository` pro čtení `operation_mode`
-- [x] upravit `GameRepository` pro zápis `operation_mode`
-- [x] upravit admin formulář založení hry
-- [x] upravit detail hry
-- [x] zobrazit režim hry v admin seznamu
+- [x] registrace hráče (backend + frontend)
+- [x] player session
+- [x] mapa hráče (Leaflet)
+- [x] GPS tracking
+- [x] API: poloha
+- [x] API: SOS
+- [x] správa uživatelů (základ)
+- [x] deploy + HTTPS
+- [x] invite flow
+- [x] režim hry (self_service / moderated)
+- [x] poklady (DB + admin create/edit + mapa)
 
 ---
 
-## Teď děláme
-- [ ] první verze pokladů
-- [ ] první zobrazení POI v hráčské mapě
-- [ ] self-service průchod hrou bez organizátora
+# 🔥 AKTUÁLNÍ PRIORITA (NEZTRATIT SMĚR)
+
+## 🎯 Cíl:
+👉 udělat první FUNKČNÍ HERU (ne jen mapu)
 
 ---
 
-## Poklady
-- [ ] navrhnout DB tabulku `treasures`
-- [ ] navrhnout DB tabulku `treasure_claims`
-- [ ] připravit SQL skript pro lokál i server
-- [ ] přidat `TreasureRepository`
-- [ ] přidat admin správu pokladů
-- [ ] přidat poklad do detailu hry
-- [ ] možnost navázat poklad na POI
-- [ ] možnost mít poklad i samostatně mimo POI
-- [ ] definovat typ pokladu:
+## 🟥 PRIORITA 1 — HERNÍ LOGIKA (KRITICKÉ)
+
+- [ ] načítat POI do hráčské mapy
+- [ ] načítat poklady do hráčské mapy
+- [ ] proximity check (hráč v radiusu)
+- [ ] endpoint: `/api/player/claim`
+- [ ] logika sebrání pokladu
+- [ ] zápis do `treasure_claims`
+- [ ] respektování `limit sebrání`
+- [ ] skrýt poklad po sebrání
+- [ ] stav: „už sebráno“
+- [ ] stav: „prázdné místo“
+
+👉 výsledek:
+hráč přijde → něco se stane → vidí výsledek
+
+---
+
+## 🟧 PRIORITA 2 — PLAYER DASHBOARD
+
+- [ ] stránka `/player/dashboard`
+- [ ] zobrazit:
+  - [ ] nickname
+  - [ ] hra
+  - [ ] progress
+- [ ] seznam:
+  - [ ] sebraných pokladů
+  - [ ] navštívených bodů
+- [ ] tlačítko zpět na mapu
+- [ ] jednoduchý „inventory“ view
+
+👉 výsledek:
+hráč chápe, co dělá
+
+---
+
+## 🟨 PRIORITA 3 — ADMIN PŘEHLED
+
+- [ ] seznam hráčů ve hře
+- [ ] poslední poloha hráče
+- [ ] seznam SOS requestů
+- [ ] detail hráče
+
+👉 výsledek:
+organizátor vidí, co se děje
+
+---
+
+## 🟩 PRIORITA 4 — NÁVODY A UX
+
+- [ ] stránka „Návod pro hráče“
+- [ ] stránka „Návod pro admina“
+- [ ] link do menu
+- [ ] krátká nápověda u formulářů:
+  - [ ] radius
+  - [ ] limit sebrání
+  - [ ] režim hry
+
+---
+
+# 🧭 HERNÍ MECHANIKY (POKLADY)
+
+- [ ] typy pokladů:
   - [ ] public
   - [ ] hidden
   - [ ] individual
   - [ ] team
-- [ ] definovat viditelnost na mapě
-- [ ] definovat limit sebrání
-- [ ] vykreslit viditelné poklady do hráčské mapy
-- [ ] přidat claim logiku
-- [ ] přidat stav „už sebráno“
-- [ ] přidat stav „prázdné místo“
-- [ ] přidat první jednoduchou inventární kartu hráče
+- [ ] viditelnost na mapě
+- [ ] navázání na POI
+- [ ] samostatné poklady
+- [ ] „tajný poklad“ (není na mapě)
+- [ ] „vybráno → prázdné místo“
 
 ---
 
-## Self-service režim
-- [ ] zobrazit POI v hráčské mapě
-- [ ] načítat POI pro konkrétní hru
-- [ ] vykreslit POI markery do Leaflet mapy
-- [ ] proximity check pro POI
+# 🧭 SELF-SERVICE REŽIM
+
+- [ ] zobrazit POI na mapě
 - [ ] odemykání POI podle vzdálenosti
-- [ ] zobrazení příběhu po příchodu na bod
+- [ ] zobrazit příběh
 - [ ] progress hráče
-- [ ] konec hry / dokončení trasy
-- [ ] základní fallback bez organizátora
-- [ ] definovat chování SOS v self-service režimu
+- [ ] dokončení hry
+- [ ] fallback bez organizátora
+- [ ] SOS chování:
   - [ ] vypnout
-  - [ ] nebo jen informativní režim
+  - [ ] nebo jen logovat
 
 ---
 
-## Moderovaný režim — později
-- [ ] propsání režimu hry do player flow
-- [ ] admin sledování hráčů na mapě
-- [ ] help systém (zpracování v adminu)
-- [ ] SOS panel pro organizátora
-- [ ] broadcast zprávy od organizátora
-- [ ] live dashboard hry
-- [ ] výsledky (tabulky)
-- [ ] chat room / týmový chat
-- [ ] moderátorské zásahy do hry
+# 🧭 MODEROVANÝ REŽIM (POZDĚJI)
+
+- [ ] admin mapa hráčů
+- [ ] live dashboard
+- [ ] SOS panel
+- [ ] broadcast zprávy
+- [ ] výsledky
+- [ ] chat (team / global)
+- [ ] zásahy admina
 
 ---
 
-## Správa uživatelů a práv
-- [ ] vytvoření nového uživatele
-- [ ] změna hesla uživatele
-- [ ] aktivace / deaktivace uživatele
-- [ ] přiřazení správce ke konkrétní hře
-- [ ] role `game_admin`
-- [ ] role `editor`
-- [ ] seznam správců hry
+# 🧹 STABILIZACE
 
----
-
-## Stabilizace a úklid
-- [ ] odstranit `.DS_Store` z projektu
-- [ ] doladit `.gitignore`
+- [ ] odstranit `.DS_Store`
+- [ ] opravit `.gitignore`
 - [ ] přesunout backupy mimo repo
-- [ ] přesunout archivní `.tar.gz` mimo repo
-- [ ] sjednotit názvy tabulek a repository
-- [ ] projít PHP warningy / notices
-- [ ] odstranit ruční hotfixe, které už nepatří do finální verze
-- [ ] zapsat DB změny do verzovaných SQL souborů
+- [ ] sjednotit názvy repository
+- [ ] odstranit warningy
+- [ ] cleanup hotfixů
+- [ ] verzované SQL migrace
 
 ---
 
-## Workflow
-- [ ] změny provádět na serveru přes VS Code Remote SSH
-- [ ] po každé logické změně commit
-- [ ] push do gitu
-- [ ] lokál držet jako mirror přes pull
-- [ ] každou DB změnu zapisovat do SQL souboru v repu
+# ⚙️ WORKFLOW
+
+- [ ] práce přes VS Code SSH
+- [ ] malé commity
+- [ ] push → server pull
+- [ ] DB změny zapisovat do SQL
 
 ---
 
-## Nejbližší konkrétní krok
-- [ ] navrhnout a vytvořit tabulky `treasures` a `treasure_claims`
+# 🚀 DALŠÍ KONKRÉTNÍ KROK
+
+👉 IMPLEMENTOVAT:
+
+- [ ] `/api/player/claim`
+- [ ] TreasureRepository → claim()
+- [ ] kontrola vzdálenosti
+- [ ] zápis do DB
+- [ ] návrat JSON (success / already claimed)
+
+👉 tím vznikne PRVNÍ HERní SMYČKA
