@@ -21,8 +21,8 @@
         }
 
         .btn-primary {
-            background:#000;
-            color:#fff;
+            background: #000;
+            color: #fff;
         }
 
         .section {
@@ -40,6 +40,24 @@
             word-break: break-all;
             margin-top: 10px;
         }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            background: #eee;
+        }
+
+        .badge-self {
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .badge-moderated {
+            background: #fff3e0;
+            color: #e65100;
+        }
     </style>
 </head>
 <body>
@@ -51,6 +69,14 @@
     <div><strong>Název</strong></div><div><?= htmlspecialchars($game['name'], ENT_QUOTES, 'UTF-8') ?></div>
     <div><strong>Slug</strong></div><div><?= htmlspecialchars($game['slug'], ENT_QUOTES, 'UTF-8') ?></div>
     <div><strong>Stav</strong></div><div><?= htmlspecialchars($game['status'], ENT_QUOTES, 'UTF-8') ?></div>
+    <div><strong>Režim hry</strong></div>
+    <div>
+        <?php if (($game['operation_mode'] ?? 'self_service') === 'moderated'): ?>
+            <span class="badge badge-moderated">Hra s organizátorem</span>
+        <?php else: ?>
+            <span class="badge badge-self">Samostatná hra</span>
+        <?php endif; ?>
+    </div>
     <div><strong>Začátek</strong></div><div><?= htmlspecialchars($game['starts_at'], ENT_QUOTES, 'UTF-8') ?></div>
     <div><strong>Konec</strong></div><div><?= htmlspecialchars($game['ends_at'], ENT_QUOTES, 'UTF-8') ?></div>
     <div><strong>Registrace</strong></div><div><?= (int) $game['registration_enabled'] === 1 ? 'ano' : 'ne' ?></div>
@@ -71,9 +97,6 @@
     <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/invites">Pozvánky & QR</a>
 </div>
 
-<!-- ========================= -->
-<!-- SDÍLENÍ HRY -->
-<!-- ========================= -->
 <div class="section">
     <h2>Sdílení hry</h2>
 
@@ -100,7 +123,12 @@
 </div>
 
 <div class="section">
-    <strong>Status:</strong> POI editor je připraven. Můžete přidávat body na mapu, definovat typy a nastavovat parametry.
+    <strong>Aktuální stav:</strong>
+    <?php if (($game['operation_mode'] ?? 'self_service') === 'moderated'): ?>
+        Tato hra je připravena pro režim s organizátorem. Později sem přibude živý dohled a zásahy správce.
+    <?php else: ?>
+        Tato hra je vedena jako samostatná. Priorita je automatické odemykání bodů, příběhy a poklady bez nutnosti moderace.
+    <?php endif; ?>
 </div>
 
 <script>

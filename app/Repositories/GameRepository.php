@@ -13,7 +13,15 @@ final class GameRepository
         $pdo = Database::connection();
 
         $stmt = $pdo->query(
-            'SELECT id, name, slug, status, starts_at, ends_at, registration_enabled
+            'SELECT
+                id,
+                name,
+                slug,
+                status,
+                operation_mode,
+                starts_at,
+                ends_at,
+                registration_enabled
              FROM games
              ORDER BY starts_at ASC, id ASC'
         );
@@ -85,6 +93,7 @@ final class GameRepository
                 ends_at,
                 registration_enabled,
                 status,
+                operation_mode,
                 map_center_lat,
                 map_center_lon,
                 map_default_zoom,
@@ -99,6 +108,7 @@ final class GameRepository
                 :ends_at,
                 :registration_enabled,
                 :status,
+                :operation_mode,
                 :map_center_lat,
                 :map_center_lon,
                 :map_default_zoom,
@@ -116,6 +126,7 @@ final class GameRepository
             'ends_at' => $data['ends_at'],
             'registration_enabled' => $data['registration_enabled'],
             'status' => $data['status'],
+            'operation_mode' => $data['operation_mode'],
             'map_center_lat' => $data['map_center_lat'],
             'map_center_lon' => $data['map_center_lon'],
             'map_default_zoom' => $data['map_default_zoom'],

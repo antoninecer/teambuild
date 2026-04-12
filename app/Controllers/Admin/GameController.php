@@ -10,7 +10,9 @@ final class GameController
 {
     private function requireAdmin(): array
     {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
         if (!isset($_SESSION['admin_user'])) {
             header('Location: /admin/login');
@@ -53,6 +55,7 @@ final class GameController
         $startsAt = trim($_POST['starts_at'] ?? '');
         $endsAt = trim($_POST['ends_at'] ?? '');
         $status = trim($_POST['status'] ?? 'draft');
+        $operationMode = trim($_POST['operation_mode'] ?? 'self_service');
         $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
         $mapCenterLat = trim($_POST['map_center_lat'] ?? '');
         $mapCenterLon = trim($_POST['map_center_lon'] ?? '');
@@ -86,6 +89,11 @@ final class GameController
         $allowedStatuses = ['draft', 'registration_open', 'active', 'finished', 'archived'];
         if (!in_array($status, $allowedStatuses, true)) {
             $errors[] = 'Neplatný stav hry.';
+        }
+
+        $allowedOperationModes = ['self_service', 'moderated'];
+        if (!in_array($operationMode, $allowedOperationModes, true)) {
+            $errors[] = 'Neplatný režim hry.';
         }
 
         $repo = new GameRepository();
@@ -126,6 +134,7 @@ final class GameController
             'ends_at' => $endsAt,
             'registration_enabled' => $registrationEnabled,
             'status' => $status,
+            'operation_mode' => $operationMode,
             'map_center_lat' => $mapCenterLat !== '' ? (float) $mapCenterLat : null,
             'map_center_lon' => $mapCenterLon !== '' ? (float) $mapCenterLon : null,
             'map_default_zoom' => (int) $mapDefaultZoom,
@@ -153,4 +162,3 @@ final class GameController
         require __DIR__ . '/../../../resources/views/admin/games/show.php';
     }
 }
-

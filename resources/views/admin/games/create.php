@@ -19,13 +19,13 @@
         }
         .btn-primary { background: #000; color: #fff; border: 1px solid #000; }
         .btn-secondary { background: #f0f0f0; border-color: #ccc; }
-        
+
         .form-group { margin-bottom: 20px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input[type="text"], 
-        input[type="number"], 
-        input[type="datetime-local"], 
-        textarea, 
+        input[type="text"],
+        input[type="number"],
+        input[type="datetime-local"],
+        textarea,
         select {
             width: 100%;
             padding: 10px;
@@ -37,7 +37,7 @@
         textarea { height: 100px; resize: vertical; }
         .checkbox-group { display: flex; align-items: center; gap: 10px; }
         .checkbox-group input { width: auto; margin: 0; }
-        
+
         .errors {
             background: #ffe6e6;
             border: 1px solid #ff9999;
@@ -47,14 +47,20 @@
             border-radius: 4px;
         }
         .errors ul { margin: 0; padding-left: 20px; }
-        
+
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
         .full-width { grid-column: span 2; }
-        
+
+        .help {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+        }
+
         @media (max-width: 600px) {
             .form-grid { grid-template-columns: 1fr; }
             .full-width { grid-column: span 1; }
@@ -129,6 +135,18 @@
                         <option value="<?= $val ?>" <?= $selectedStatus === $val ? 'selected' : '' ?>><?= $label ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label for="operation_mode">Režim hry</label>
+                <select id="operation_mode" name="operation_mode">
+                    <?php $selectedMode = $old['operation_mode'] ?? 'self_service'; ?>
+                    <option value="self_service" <?= $selectedMode === 'self_service' ? 'selected' : '' ?>>Samostatná hra</option>
+                    <option value="moderated" <?= $selectedMode === 'moderated' ? 'selected' : '' ?>>Hra s organizátorem</option>
+                </select>
+                <div class="help">
+                    Samostatná hra běží bez živého organizátora. Hra s organizátorem počítá s dohledem a zásahy správce.
+                </div>
             </div>
 
             <div class="form-group checkbox-group" style="padding-top: 25px;">
