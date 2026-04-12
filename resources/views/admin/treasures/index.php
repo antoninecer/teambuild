@@ -19,6 +19,7 @@
             display: inline-block;
         }
         .btn-primary { background: #000; color: #fff; border: 1px solid #000; }
+        .btn-danger { color: #b00020; border-color: #b00020; }
         .badge {
             display: inline-block;
             padding: 4px 8px;
@@ -51,6 +52,7 @@
                     <th>Body</th>
                     <th>Mapa</th>
                     <th>Aktivní</th>
+                    <th>Akce</th>
                 </tr>
             </thead>
             <tbody>
@@ -75,6 +77,12 @@
                         <td><?= (int) $treasure['points'] ?></td>
                         <td><?= (int) $treasure['is_visible_on_map'] === 1 ? 'ano' : 'ne' ?></td>
                         <td><?= (int) $treasure['is_enabled'] === 1 ? 'ano' : 'ne' ?></td>
+                        <td>
+                            <a href="/admin/treasures/<?= (int) $treasure['id'] ?>/edit">Upravit</a>
+                            <form action="/admin/treasures/<?= (int) $treasure['id'] ?>/delete" method="POST" style="display:inline; margin-left:8px;">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Opravdu smazat tento poklad?')">Smazat</button>
+                            </form>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

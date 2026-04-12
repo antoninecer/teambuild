@@ -27,6 +27,23 @@ final class TreasureRepository
         return $stmt->fetchAll();
     }
 
+    public function findById(int $id): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT *
+             FROM treasures
+             WHERE id = :id
+             LIMIT 1'
+        );
+
+        $stmt->execute(['id' => $id]);
+        $treasure = $stmt->fetch();
+
+        return $treasure ?: null;
+    }
+
     public function create(array $data): int
     {
         $pdo = Database::connection();
@@ -77,5 +94,50 @@ final class TreasureRepository
         ]);
 
         return (int) $pdo->lastInsertId();
+    }
+
+    public function update(int $id, array $data): void
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'UPDATE treasures
+             SET
+                poi_id = :poi_id,
+                name = :name,
+                description = :description,
+                lat = :lat,
+                lon = :lon,
+                radius_m = :radius_m,
+                treasure_type = :treasure_type,
+                is_visible_on_map = :is_visible_on_map,
+                max_claims = :max_claims,
+                points = :points,
+                is_enabled = :is_enabled
+             WHERE id = :id'
+        );
+
+        $stmt->execute([
+            'id' => $id,
+            'poi_id' => $data['poi_id'] ?? null,
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'lat' => $data['lat'],
+            'lon' => $data['lon'],
+            'radius_m' => $data['radius_m'],
+            'treasure_type' => $data['treasure_type'],
+            'is_visible_on_map' => $data['is_visible_on_map'],
+            'max_claims' => $data['max_claims'],
+            'points' => $data['points'],
+            'is_enabled' => $data['is_enabled'],
+        ]);
+    }
+
+    public function delete(int $id): void
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare('DELETE FROM treasures WHERE id = :id');
+        $stmt->execute(['id' => $id]);
     }
 }

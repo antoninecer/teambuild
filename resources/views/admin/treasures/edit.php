@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Nový poklad</title>
+    <title>Upravit poklad</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
         body {
@@ -142,7 +142,7 @@
 </head>
 <body>
     <h1>
-        Nový poklad pro hru: <?= htmlspecialchars($game['name'], ENT_QUOTES, 'UTF-8') ?>
+        Upravit poklad: <?= htmlspecialchars($treasure['name'], ENT_QUOTES, 'UTF-8') ?>
         <span class="badge">POKLAD</span>
     </h1>
 
@@ -161,31 +161,31 @@
             </div>
         <?php endif; ?>
 
-        <form action="/admin/games/<?= (int) $game['id'] ?>/treasures" method="POST">
+        <?php
+        $form = $old ?: $treasure;
+        ?>
+        <form action="/admin/treasures/<?= (int) $treasure['id'] ?>" method="POST">
             <div class="grid">
                 <div>
                     <div class="form-group">
                         <label for="name">Název pokladu*</label>
-                        <input type="text" id="name" name="name" value="<?= htmlspecialchars($old['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                        <input type="text" id="name" name="name" value="<?= htmlspecialchars((string) ($form['name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
                     </div>
 
                     <div class="form-group">
                         <label for="treasure_type">Typ pokladu*</label>
-                        <?php $selectedType = $old['treasure_type'] ?? 'public'; ?>
+                        <?php $selectedType = $form['treasure_type'] ?? 'public'; ?>
                         <select id="treasure_type" name="treasure_type" required>
                             <option value="public" <?= $selectedType === 'public' ? 'selected' : '' ?>>Public</option>
                             <option value="hidden" <?= $selectedType === 'hidden' ? 'selected' : '' ?>>Hidden</option>
                             <option value="individual" <?= $selectedType === 'individual' ? 'selected' : '' ?>>Individual</option>
                             <option value="team" <?= $selectedType === 'team' ? 'selected' : '' ?>>Team</option>
                         </select>
-                        <div class="hint">
-                            Public = první bere. Hidden = skrytý. Individual = každý hráč jednou. Team = týmový poklad.
-                        </div>
                     </div>
 
                     <div class="form-group">
                         <label for="description">Popis</label>
-                        <textarea id="description" name="description"><?= htmlspecialchars($old['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                        <textarea id="description" name="description"><?= htmlspecialchars((string) ($form['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
                     </div>
 
                     <div class="form-group">
@@ -193,7 +193,7 @@
                         <select id="poi_id" name="poi_id">
                             <option value="">-- bez POI --</option>
                             <?php foreach ($pois as $poi): ?>
-                                <option value="<?= (int) $poi['id'] ?>" <?= (($old['poi_id'] ?? '') == $poi['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int) $poi['id'] ?>" <?= ((string) ($form['poi_id'] ?? '') === (string) $poi['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($poi['name'], ENT_QUOTES, 'UTF-8') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -202,27 +202,27 @@
 
                     <div class="form-group">
                         <label for="lat">Latitude*</label>
-                        <input type="text" id="lat" name="lat" value="<?= htmlspecialchars($old['lat'] ?? ($game['map_center_lat'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <input type="text" id="lat" name="lat" value="<?= htmlspecialchars((string) ($form['lat'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
                     </div>
 
                     <div class="form-group">
                         <label for="lon">Longitude*</label>
-                        <input type="text" id="lon" name="lon" value="<?= htmlspecialchars($old['lon'] ?? ($game['map_center_lon'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <input type="text" id="lon" name="lon" value="<?= htmlspecialchars((string) ($form['lon'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
                     </div>
 
                     <div class="form-group">
                         <label for="radius_m">Radius (metry)*</label>
-                        <input type="number" id="radius_m" name="radius_m" value="<?= htmlspecialchars($old['radius_m'] ?? '20', ENT_QUOTES, 'UTF-8') ?>" min="1" required>
+                        <input type="number" id="radius_m" name="radius_m" value="<?= htmlspecialchars((string) ($form['radius_m'] ?? '20'), ENT_QUOTES, 'UTF-8') ?>" min="1" required>
                     </div>
 
                     <div class="form-group">
                         <label for="max_claims">Limit sebrání</label>
-                        <input type="number" id="max_claims" name="max_claims" value="<?= htmlspecialchars($old['max_claims'] ?? '', ENT_QUOTES, 'UTF-8') ?>" min="1">
+                        <input type="number" id="max_claims" name="max_claims" value="<?= htmlspecialchars((string) ($form['max_claims'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" min="1">
                     </div>
 
                     <div class="form-group">
                         <label for="points">Body</label>
-                        <input type="number" id="points" name="points" value="<?= htmlspecialchars($old['points'] ?? '0', ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="number" id="points" name="points" value="<?= htmlspecialchars((string) ($form['points'] ?? '0'), ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                 </div>
 
@@ -231,24 +231,24 @@
 
                     <div class="checkbox-row">
                         <div>
-                            <input type="checkbox" id="is_visible_on_map" name="is_visible_on_map" value="1" <?= array_key_exists('is_visible_on_map', $old ?? []) ? 'checked' : 'checked' ?>>
+                            <input type="checkbox" id="is_visible_on_map" name="is_visible_on_map" value="1" <?= ((int) ($form['is_visible_on_map'] ?? 0) === 1) ? 'checked' : '' ?>>
                             <label for="is_visible_on_map">Zobrazit na mapě</label>
                         </div>
 
                         <div>
-                            <input type="checkbox" id="is_enabled" name="is_enabled" value="1" <?= array_key_exists('is_enabled', $old ?? []) ? 'checked' : 'checked' ?>>
+                            <input type="checkbox" id="is_enabled" name="is_enabled" value="1" <?= ((int) ($form['is_enabled'] ?? 0) === 1) ? 'checked' : '' ?>>
                             <label for="is_enabled">Aktivní</label>
                         </div>
                     </div>
 
                     <div class="hint">
-                        Klikni do mapy pro umístění pokladu. Marker se přesune a souřadnice se automaticky vyplní.
+                        Klikni do mapy pro přesun pokladu. Marker se přesune a souřadnice se automaticky vyplní.
                     </div>
                 </div>
             </div>
 
             <div style="margin-top: 20px;">
-                <button type="submit" class="btn btn-primary">Uložit poklad</button>
+                <button type="submit" class="btn btn-primary">Uložit změny</button>
             </div>
         </form>
     </div>

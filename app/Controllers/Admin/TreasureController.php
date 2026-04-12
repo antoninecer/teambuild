@@ -73,9 +73,6 @@ final class TreasureController
         $this->requireAdmin();
 
         $gameRepo = new GameRepository();
-        $poiRepo = new PoiRepository();
-        $treasureRepo = new TreasureRepository();
-
         $game = $gameRepo->findById($gameId);
 
         if (!$game) {
@@ -84,17 +81,117 @@ final class TreasureController
             exit;
         }
 
-        $name = trim($_POST['name'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $poiId = trim($_POST['poi_id'] ?? '');
-        $lat = trim($_POST['lat'] ?? '');
-        $lon = trim($_POST['lon'] ?? '');
-        $radiusM = trim($_POST['radius_m'] ?? '20');
-        $treasureType = trim($_POST['treasure_type'] ?? 'public');
-        $isVisibleOnMap = isset($_POST['is_visible_on_map']) ? 1 : 0;
-        $maxClaims = trim($_POST['max_claims'] ?? '');
-        $points = trim($_POST['points'] ?? '0');
-        $isEnabled = isset($_POST['is_enabled']) ? 1 : 0;
+        [$data, $errors] = $this->validateTreasureInput($_POST);
+
+        if ($errors !== []) {
+            $_SESSION['treasure_form_errors'] = $errors;
+            $_SESSION['treasure_form_old'] = $_POST;
+            header('Location: /admin/games/' . $gameId . '/treasures/create');
+            exit;
+        }
+
+        $repo = new TreasureRepository();
+        $data['game_id'] = $gameId;
+        $repo->create($data);
+
+        header('Location: /admin/games/' . $gameId . '/treasures');
+        exit;
+    }
+
+    public function editForm(int $treasureId): void
+    {
+        $this->requireAdmin();
+
+        $repo = new TreasureRepository();
+        $gameRepo = new GameRepository();
+        $poiRepo = new PoiRepository();
+
+        $treasure = $repo->findById($treasureId);
+
+        if (!$treasure) {
+            http_response_code(404);
+            echo 'Poklad nebyl nalezen.';
+            exit;
+        }
+
+        $game = $gameRepo->findById((int) $treasure['game_id']);
+
+        if (!$game) {
+            http_response_code(404);
+            echo 'Hra nebyla nalezena.';
+            exit;
+        }
+
+        $pois = $poiRepo->allForGame((int) $game['id']);
+        $old = $_SESSION['treasure_form_old'] ?? [];
+        $errors = $_SESSION['treasure_form_errors'] ?? [];
+
+        unset($_SESSION['treasure_form_old'], $_SESSION['treasure_form_errors']);
+
+        require __DIR__ . '/../../../resources/views/admin/treasures/edit.php';
+    }
+
+    public function update(int $treasureId): void
+    {
+        $this->requireAdmin();
+
+        $repo = new TreasureRepository();
+        $treasure = $repo->findById($treasureId);
+
+        if (!$treasure) {
+            http_response_code(404);
+            echo 'Poklad nebyl nalezen.';
+            exit;
+        }
+
+        [$data, $errors] = $this->validateTreasureInput($_POST);
+
+        if ($errors !== []) {
+            $_SESSION['treasure_form_errors'] = $errors;
+            $_SESSION['treasure_form_old'] = $_POST;
+            header('Location: /admin/treasures/' . $treasureId . '/edit');
+            exit;
+        }
+
+        $repo->update($treasureId, $data);
+
+        header('Location: /admin/games/' . (int) $treasure['game_id'] . '/treasures');
+        exit;
+    }
+
+    public function delete(int $treasureId): void
+    {
+        $this->requireAdmin();
+
+        $repo = new TreasureRepository();
+        $treasure = $repo->findById($treasureId);
+
+        if (!$treasure) {
+            http_response_code(404);
+            echo 'Poklad nebyl nalezen.';
+            exit;
+        }
+
+        $gameId = (int) $treasure['game_id'];
+        $repo->delete($treasureId);
+
+        header('Location: /admin/games/' . $gameId . '/treasures');
+        exit;
+    }
+
+    private function validateTreasureInput(array $input): array
+    {
+        $name = trim($input['name'] ?? '');
+        $description = trim($input['description'] ?? '');
+        $poiId = trim($input['poi_id'] ?? '');
+        $lat = trim($input['lat'] ?? '');
+        $lon = trim($input['lon'] ?? '');
+        $radiusM = trim($input['radius_m'] ?? '20');
+        $treasureType = trim($input['treasure_type'] ?? 'public');
+        $isVisibleOnMap = isset($input['is_visible_on_map']) ? 1 : 0;
+        $maxClaims = trim($input['max_claims'] ?? '');
+        $points = trim($input['points'] ?? '0');
+        $isEnabled = isset($input['is_enabled']) ? 1 : 0;
 
         $errors = [];
 
@@ -127,15 +224,7 @@ final class TreasureController
             $errors[] = 'Body musí být číslo.';
         }
 
-        if ($errors !== []) {
-            $_SESSION['treasure_form_errors'] = $errors;
-            $_SESSION['treasure_form_old'] = $_POST;
-            header('Location: /admin/games/' . $gameId . '/treasures/create');
-            exit;
-        }
-
-        $treasureRepo->create([
-            'game_id' => $gameId,
+        return [[
             'poi_id' => $poiId !== '' ? (int) $poiId : null,
             'name' => $name,
             'description' => $description !== '' ? $description : null,
@@ -147,9 +236,6 @@ final class TreasureController
             'max_claims' => $maxClaims !== '' ? (int) $maxClaims : null,
             'points' => (int) $points,
             'is_enabled' => $isEnabled,
-        ]);
-
-        header('Location: /admin/games/' . $gameId . '/treasures');
-        exit;
+        ], $errors];
     }
 }

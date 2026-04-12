@@ -39,17 +39,13 @@ use App\Controllers\Player\PlayerController;
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
-// =========================
 // ROOT
-// =========================
 if ($uri === '/' || $uri === '') {
     header('Location: /admin');
     exit;
 }
 
-// =========================
 // AUTH
-// =========================
 if ($uri === '/admin/login' && $method === 'GET') {
     (new AuthController())->showLogin();
     exit;
@@ -65,17 +61,13 @@ if ($uri === '/admin/logout' && $method === 'POST') {
     exit;
 }
 
-// =========================
 // ADMIN DASHBOARD
-// =========================
 if ($uri === '/admin' && $method === 'GET') {
     (new DashboardController())->index();
     exit;
 }
 
-// =========================
 // ADMIN - USERS
-// =========================
 if ($uri === '/admin/users' && $method === 'GET') {
     (new UserController())->index();
     exit;
@@ -101,9 +93,7 @@ if ($method === 'POST' && preg_match('#^/admin/users/(\d+)/password$#', $uri, $m
     exit;
 }
 
-// =========================
 // ADMIN - GAMES
-// =========================
 if ($uri === '/admin/games' && $method === 'GET') {
     (new GameController())->index();
     exit;
@@ -124,9 +114,7 @@ if ($method === 'GET' && preg_match('#^/admin/games/(\d+)$#', $uri, $matches)) {
     exit;
 }
 
-// =========================
 // ADMIN - POI
-// =========================
 if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/pois$#', $uri, $matches)) {
     (new PoiController())->index((int) $matches[1]);
     exit;
@@ -157,9 +145,7 @@ if ($method === 'POST' && preg_match('#^/admin/pois/(\d+)/delete$#', $uri, $matc
     exit;
 }
 
-// =========================
 // ADMIN - TREASURES
-// =========================
 if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/treasures$#', $uri, $matches)) {
     (new TreasureController())->index((int) $matches[1]);
     exit;
@@ -175,9 +161,22 @@ if ($method === 'POST' && preg_match('#^/admin/games/(\d+)/treasures$#', $uri, $
     exit;
 }
 
-// =========================
+if ($method === 'GET' && preg_match('#^/admin/treasures/(\d+)/edit$#', $uri, $matches)) {
+    (new TreasureController())->editForm((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'POST' && preg_match('#^/admin/treasures/(\d+)$#', $uri, $matches)) {
+    (new TreasureController())->update((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'POST' && preg_match('#^/admin/treasures/(\d+)/delete$#', $uri, $matches)) {
+    (new TreasureController())->delete((int) $matches[1]);
+    exit;
+}
+
 // ADMIN - INVITES
-// =========================
 if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/invites$#', $uri, $matches)) {
     (new InviteController())->index((int) $matches[1]);
     exit;
@@ -198,9 +197,7 @@ if ($method === 'POST' && preg_match('#^/admin/invites/(\d+)/delete$#', $uri, $m
     exit;
 }
 
-// =========================
 // PLAYER
-// =========================
 if ($method === 'GET' && preg_match('#^/game/([^/]+)$#', $uri, $matches)) {
     (new PlayerController())->showGame($matches[1]);
     exit;
@@ -211,9 +208,7 @@ if ($method === 'POST' && preg_match('#^/game/([^/]+)/register$#', $uri, $matche
     exit;
 }
 
-// =========================
 // API
-// =========================
 if ($method === 'POST' && $uri === '/api/player/location') {
     (new PlayerController())->updateLocation();
     exit;
@@ -224,8 +219,6 @@ if ($method === 'POST' && $uri === '/api/player/help') {
     exit;
 }
 
-// =========================
 // 404
-// =========================
 http_response_code(404);
 echo '404 Not Found';
