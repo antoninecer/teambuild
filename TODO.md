@@ -167,3 +167,157 @@ organizátor vidí, co se děje
 - [ ] návrat JSON (success / already claimed)
 
 👉 tím vznikne PRVNÍ HERní SMYČKA
+
+potrebuju pokud je popis jak mista tak pokladu aby bylo mozne precist objevi se nekde na mape nejake info modul a moznost hlasem precist umis to ?
+Thought for 5s
+
+Ano, tohle umím navrhnout a je to velmi dobrý krok.
+
+A navíc bych to udělal ve dvou vrstvách, aby ses nezasekl na složitosti.
+
+Co přesně bych udělal
+
+Když hráč:
+
+dorazí do bodu,
+nebo najde poklad,
+
+tak se otevře informační panel nad mapou:
+
+název
+popis
+příběh
+obrázek, pokud existuje
+tlačítko:
+Přečíst nahlas
+případně Zastavit čtení
+Nejrychlejší verze
+1. Info panel v mapě
+
+Na player dashboardu přidat skrytý panel, který se otevře:
+
+po vstupu do radiusu POI
+po claimnutí pokladu
+nebo kliknutím na marker
+
+Obsah:
+
+name
+story_text nebo description
+u treasure name + description
+2. Čtení hlasem přes prohlížeč
+
+Použil bych hned:
+
+window.speechSynthesis
+
+To je nejrychlejší, protože:
+
+nic negeneruješ na serveru
+nemusíš ukládat audio
+funguje to hned
+na telefonu to často funguje překvapivě dobře
+
+Například:
+
+vezmeš text
+vytvoříš SpeechSynthesisUtterance
+přehraješ
+
+To je ideální MVP.
+
+Lepší verze později
+
+Až budeš chtít hezčí zážitek:
+
+předgenerované audio u POI
+předgenerované audio u pokladů
+možnost:
+přehrát originální audio
+nebo fallback na browser TTS
+
+To znamená:
+
+ručně nahraný hlas
+nebo AI voice
+a když chybí audio, použije se speech synthesis
+Co bych doporučil teď
+Pro POI
+
+Číst:
+
+story_text
+a když není, tak description
+Pro poklad
+
+Číst:
+
+description
+a když není, tak name
+UX návrh
+
+Po příchodu k bodu:
+
+vyskočí panel
+tlačítka:
+Přehrát hlasem
+Zavřít
+případně Pokračovat
+
+To je přesně ten moment, kdy hra začne působit živě.
+
+Technicky je to snadné
+
+Ano, umím to, a šel bych tímto pořadím:
+
+krok 1
+
+Info modul v player mapě
+
+krok 2
+
+Speech synthesis tlačítko
+
+krok 3
+
+Napojení na:
+
+POI unlock
+treasure claim
+Důležitá poznámka
+
+Na mobilech může být potřeba, aby se hlas spustil až po interakci uživatele:
+
+kliknutí na tlačítko
+ne automaticky bez dotyku
+
+Takže pro první verzi bych nedělal:
+
+automatické čtení samo od sebe
+
+Ale:
+
+otevře se panel
+hráč klikne Přečíst nahlas
+
+To je spolehlivější.
+
+Můj verdikt
+
+Ano.
+A je to velmi dobrý nápad, protože:
+
+POI dostanou atmosféru
+poklady budou působit živě
+sekretariát to pochopí
+hráč dostane jasnou akci
+
+Teď bych to udělal v pořadí:
+info panel → čtení hlasem → claim/unlock napojení
+
+Pošli mi pak:
+
+resources/views/player/dashboard.php
+app/Controllers/Player/PlayerController.php
+
+a uděláme první verzi panelu i s tlačítkem Přečíst nahlas.
