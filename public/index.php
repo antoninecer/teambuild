@@ -13,6 +13,7 @@ require_once __DIR__ . '/../app/Repositories/InviteRepository.php';
 require_once __DIR__ . '/../app/Repositories/TeamRepository.php';
 require_once __DIR__ . '/../app/Repositories/PlayerRepository.php';
 require_once __DIR__ . '/../app/Repositories/HelpRepository.php';
+require_once __DIR__ . '/../app/Repositories/TreasureRepository.php';
 
 // Controllers - Admin
 require_once __DIR__ . '/../app/Controllers/Admin/AuthController.php';
@@ -21,6 +22,7 @@ require_once __DIR__ . '/../app/Controllers/Admin/GameController.php';
 require_once __DIR__ . '/../app/Controllers/Admin/PoiController.php';
 require_once __DIR__ . '/../app/Controllers/Admin/InviteController.php';
 require_once __DIR__ . '/../app/Controllers/Admin/UserController.php';
+require_once __DIR__ . '/../app/Controllers/Admin/TreasureController.php';
 
 // Controllers - Player
 require_once __DIR__ . '/../app/Controllers/Player/PlayerController.php';
@@ -30,6 +32,7 @@ use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\GameController;
 use App\Controllers\Admin\InviteController;
 use App\Controllers\Admin\PoiController;
+use App\Controllers\Admin\TreasureController;
 use App\Controllers\Admin\UserController;
 use App\Controllers\Player\PlayerController;
 
@@ -151,6 +154,24 @@ if ($method === 'POST' && preg_match('#^/admin/pois/(\d+)$#', $uri, $matches)) {
 
 if ($method === 'POST' && preg_match('#^/admin/pois/(\d+)/delete$#', $uri, $matches)) {
     (new PoiController())->delete((int) $matches[1]);
+    exit;
+}
+
+// =========================
+// ADMIN - TREASURES
+// =========================
+if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/treasures$#', $uri, $matches)) {
+    (new TreasureController())->index((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/treasures/create$#', $uri, $matches)) {
+    (new TreasureController())->createForm((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'POST' && preg_match('#^/admin/games/(\d+)/treasures$#', $uri, $matches)) {
+    (new TreasureController())->store((int) $matches[1]);
     exit;
 }
 

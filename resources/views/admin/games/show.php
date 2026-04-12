@@ -8,7 +8,7 @@
 
         .grid { display: grid; grid-template-columns: 220px 1fr; gap: 10px 20px; }
 
-        .actions { margin-top: 24px; display: flex; gap: 12px; }
+        .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
 
         .btn {
             padding: 10px 14px;
@@ -94,6 +94,7 @@
 <div class="actions">
     <a class="btn" href="/admin/games">Zpět na seznam</a>
     <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/pois">Správa bodů (POI)</a>
+    <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/treasures">Poklady</a>
     <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/invites">Pozvánky & QR</a>
 </div>
 

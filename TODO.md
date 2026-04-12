@@ -26,46 +26,24 @@
 - [x] nasazení na play.rightdone.eu
 - [x] HTTPS / certifikát
 - [x] základní invite flow do hry
+- [x] přepínač režimu hry: samostatná / s organizátorem
+- [x] přidat do DB sloupec `operation_mode`
+- [x] default nastavit na `self_service`
+- [x] podporované hodnoty:
+  - [x] `self_service`
+  - [x] `moderated`
+- [x] upravit `GameRepository` pro čtení `operation_mode`
+- [x] upravit `GameRepository` pro zápis `operation_mode`
+- [x] upravit admin formulář založení hry
+- [x] upravit detail hry
+- [x] zobrazit režim hry v admin seznamu
 
 ---
 
 ## Teď děláme
-- [ ] přepínač režimu hry: samostatná / s organizátorem
-- [ ] propsání režimu hry do adminu
-- [ ] propsání režimu hry do player flow
 - [ ] první verze pokladů
 - [ ] první zobrazení POI v hráčské mapě
-
----
-
-## Režim hry
-- [ ] přidat do DB sloupec `operation_mode`
-- [ ] default nastavit na `self_service`
-- [ ] podporované hodnoty:
-  - [ ] `self_service`
-  - [ ] `moderated`
-- [ ] upravit `GameRepository` pro čtení `operation_mode`
-- [ ] upravit `GameRepository` pro zápis `operation_mode`
-- [ ] upravit admin formulář založení hry
-- [ ] upravit detail hry
-- [ ] zobrazit režim hry v admin seznamu
-- [ ] připravit podmínky pro budoucí moderovaný dashboard
-
----
-
-## Self-service režim
-- [ ] zobrazit POI v hráčské mapě
-- [ ] načítat POI pro konkrétní hru
-- [ ] vykreslit POI markery do Leaflet mapy
-- [ ] proximity check pro POI
-- [ ] odemykání POI podle vzdálenosti
-- [ ] zobrazení příběhu po příchodu na bod
-- [ ] progress hráče
-- [ ] konec hry / dokončení trasy
-- [ ] základní fallback bez organizátora
-- [ ] definovat chování SOS v self-service režimu
-  - [ ] vypnout
-  - [ ] nebo jen informativní režim
+- [ ] self-service průchod hrou bez organizátora
 
 ---
 
@@ -89,11 +67,28 @@
 - [ ] přidat claim logiku
 - [ ] přidat stav „už sebráno“
 - [ ] přidat stav „prázdné místo“
-- [ ] přidat první jednoduchou „inventární kartu“ hráče
+- [ ] přidat první jednoduchou inventární kartu hráče
+
+---
+
+## Self-service režim
+- [ ] zobrazit POI v hráčské mapě
+- [ ] načítat POI pro konkrétní hru
+- [ ] vykreslit POI markery do Leaflet mapy
+- [ ] proximity check pro POI
+- [ ] odemykání POI podle vzdálenosti
+- [ ] zobrazení příběhu po příchodu na bod
+- [ ] progress hráče
+- [ ] konec hry / dokončení trasy
+- [ ] základní fallback bez organizátora
+- [ ] definovat chování SOS v self-service režimu
+  - [ ] vypnout
+  - [ ] nebo jen informativní režim
 
 ---
 
 ## Moderovaný režim — později
+- [ ] propsání režimu hry do player flow
 - [ ] admin sledování hráčů na mapě
 - [ ] help systém (zpracování v adminu)
 - [ ] SOS panel pro organizátora
@@ -138,4 +133,4 @@
 ---
 
 ## Nejbližší konkrétní krok
-- [ ] přidat `operation_mode` do DB a admin formuláře hry
+- [ ] navrhnout a vytvořit tabulky `treasures` a `treasure_claims`
