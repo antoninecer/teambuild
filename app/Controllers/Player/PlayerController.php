@@ -220,6 +220,12 @@ final class PlayerController
         $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
 
         $pois = $this->poiRepo->activeForGame($gameId);
+
+        foreach ($pois as &$poi) {
+            $poi['media'] = $this->poiRepo->getMedia((int) $poi['id']);
+        }
+        unset($poi);
+
         $treasures = $this->treasureRepo->visibleForGameWithClaimState($gameId, $playerId, $teamId);
 
         echo json_encode([

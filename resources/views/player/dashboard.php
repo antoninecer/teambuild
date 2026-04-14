@@ -76,6 +76,27 @@
             color: #666;
             margin-bottom: 12px;
         }
+
+        .poi-media {
+            margin-bottom: 14px;
+        }
+
+        .poi-media img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .poi-media iframe {
+            display: block;
+            width: 100%;
+            min-height: 220px;
+            border: 0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -115,6 +136,7 @@
             <h2 id="poiTitle">Detail</h2>
             <div id="poiType" class="poi-type" style="display:none;"></div>
             <div id="poiMeta" class="poi-meta"></div>
+            <div id="poiMedia" class="poi-media"></div>
             <div id="poiText" class="poi-text"></div>
             <div class="modal-btns">
                 <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="speakCurrentText()">PŘEČÍST NAHLAS</button>
@@ -167,6 +189,78 @@
                 Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
+        }
+
+        function normalizeYoutubeUrl(url) {
+            if (!url) {
+                return null;
+            }
+
+            try {
+                const parsed = new URL(url);
+
+                if (parsed.hostname.includes('youtu.be')) {
+                    const videoId = parsed.pathname.replace('/', '').trim();
+                    return videoId ? 'https://www.youtube.com/embed/' + videoId : null;
+                }
+
+                if (parsed.hostname.includes('youtube.com')) {
+                    const videoId = parsed.searchParams.get('v');
+                    if (videoId) {
+                        return 'https://www.youtube.com/embed/' + videoId;
+                    }
+
+                    if (parsed.pathname.startsWith('/embed/')) {
+                        return url;
+                    }
+                }
+            } catch (e) {
+                console.warn('Neplatná YouTube URL', url);
+            }
+
+            return null;
+        }
+
+        function renderPoiMedia(mediaList) {
+            const container = document.getElementById('poiMedia');
+            container.innerHTML = '';
+
+            if (!Array.isArray(mediaList) || mediaList.length === 0) {
+                return;
+            }
+
+            mediaList.forEach(media => {
+                const mediaType = String(media.media_type || '').toLowerCase();
+                const filePath = String(media.file_path || '').trim();
+
+                if (!filePath) {
+                    return;
+                }
+
+                if (mediaType === 'image') {
+                    const img = document.createElement('img');
+                    img.src = filePath;
+                    img.alt = media.title || media.alt_text || 'Obrázek k bodu';
+                    img.loading = 'lazy';
+                    container.appendChild(img);
+                    return;
+                }
+
+                if (mediaType === 'video') {
+                    const youtubeEmbed = normalizeYoutubeUrl(filePath);
+
+                    if (youtubeEmbed) {
+                        const iframe = document.createElement('iframe');
+                        iframe.src = youtubeEmbed;
+                        iframe.title = media.title || 'Video';
+                        iframe.loading = 'lazy';
+                        iframe.allow =
+                            'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+                        iframe.allowFullscreen = true;
+                        container.appendChild(iframe);
+                    }
+                }
+            });
         }
 
         function updateLocation(pos) {
@@ -282,12 +376,14 @@
                 lat: Number(poi.lat),
                 lon: Number(poi.lon),
                 type: poi.type || 'poi',
+                media: Array.isArray(poi.media) ? poi.media : [],
             };
 
             document.getElementById('poiTitle').innerText = currentDetail.title;
             document.getElementById('poiType').style.display = 'inline-block';
             document.getElementById('poiType').innerText = currentDetail.type;
             document.getElementById('poiText').innerText = currentDetail.text;
+            renderPoiMedia(currentDetail.media);
             document.getElementById('claimBtn').style.display = 'none';
 
             let meta = '';
@@ -320,6 +416,7 @@
             document.getElementById('poiType').style.display = 'inline-block';
             document.getElementById('poiType').innerText = 'treasure';
             document.getElementById('poiText').innerText = currentDetail.text;
+            renderPoiMedia([]);
 
             let canClaim = true;
             let meta = '';
