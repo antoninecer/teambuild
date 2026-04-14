@@ -219,6 +219,16 @@ if ($method === 'POST' && $uri === '/api/player/help') {
     exit;
 }
 
+if ($method === 'GET' && $uri === '/api/player/map-data') {
+    (new PlayerController())->mapData();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/claim') {
+    (new PlayerController())->claimTreasure();
+    exit;
+}
+
 // 404
 http_response_code(404);
 echo '404 Not Found';

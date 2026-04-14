@@ -8,6 +8,8 @@ use App\Repositories\GameRepository;
 use App\Repositories\HelpRepository;
 use App\Repositories\InviteRepository;
 use App\Repositories\PlayerRepository;
+use App\Repositories\PoiRepository;
+use App\Repositories\TreasureRepository;
 
 final class PlayerController
 {
@@ -15,6 +17,8 @@ final class PlayerController
     private InviteRepository $inviteRepo;
     private PlayerRepository $playerRepo;
     private HelpRepository $helpRepo;
+    private PoiRepository $poiRepo;
+    private TreasureRepository $treasureRepo;
 
     public function __construct()
     {
@@ -22,6 +26,8 @@ final class PlayerController
         $this->inviteRepo = new InviteRepository();
         $this->playerRepo = new PlayerRepository();
         $this->helpRepo = new HelpRepository();
+        $this->poiRepo = new PoiRepository();
+        $this->treasureRepo = new TreasureRepository();
     }
 
     public function showGame(string $slug): void
@@ -40,14 +46,13 @@ final class PlayerController
             return;
         }
 
-        // SESSION CHECK
         $token = $_COOKIE['player_session'] ?? null;
         if ($token) {
             $tokenHash = hash('sha256', $token);
             $session = $this->playerRepo->findBySessionToken($tokenHash);
 
-            if ($session && (int)$session['game_id'] === (int)$game['id'] && strtotime($session['expires_at']) > time()) {
-                $this->dashboard((int)$session['player_id'], $game);
+            if ($session && (int) $session['game_id'] === (int) $game['id'] && strtotime($session['expires_at']) > time()) {
+                $this->dashboard((int) $session['player_id'], $game);
                 return;
             }
         }
@@ -97,7 +102,7 @@ final class PlayerController
             return;
         }
 
-        if ($this->playerRepo->findByNicknameInGame($nickname, (int)$game['id'])) {
+        if ($this->playerRepo->findByNicknameInGame($nickname, (int) $game['id'])) {
             $error = "Tento nickname je již obsazen.";
             require __DIR__ . '/../../../resources/views/player/register.php';
             return;
@@ -108,13 +113,13 @@ final class PlayerController
         if ($inviteCode !== '') {
             $invite = $this->inviteRepo->findByCode($inviteCode);
 
-            if (!$invite || (int)$invite['game_id'] !== (int)$game['id'] || (int)$invite['is_active'] === 0) {
+            if (!$invite || (int) $invite['game_id'] !== (int) $game['id'] || (int) $invite['is_active'] === 0) {
                 $error = "Neplatný invite kód.";
                 require __DIR__ . '/../../../resources/views/player/register.php';
                 return;
             }
 
-            if ($invite['max_uses'] !== null && (int)$invite['used_count'] >= (int)$invite['max_uses']) {
+            if ($invite['max_uses'] !== null && (int) $invite['used_count'] >= (int) $invite['max_uses']) {
                 $error = "Invite je vyčerpaný.";
                 require __DIR__ . '/../../../resources/views/player/register.php';
                 return;
@@ -130,7 +135,7 @@ final class PlayerController
         ]);
 
         if ($invite) {
-            $this->inviteRepo->incrementUsage((int)$invite['id']);
+            $this->inviteRepo->incrementUsage((int) $invite['id']);
         }
 
         $token = bin2hex(random_bytes(32));
@@ -143,7 +148,7 @@ final class PlayerController
 
         unset($_SESSION['invite_code']);
 
-        header("Location: /game/" . $game['slug']);
+        header('Location: /game/' . $game['slug']);
         exit;
     }
 
@@ -155,6 +160,8 @@ final class PlayerController
 
     public function updateLocation(): void
     {
+        header('Content-Type: application/json; charset=utf-8');
+
         $session = $this->getSession();
         if (!$session) {
             $this->unauthorized();
@@ -167,14 +174,16 @@ final class PlayerController
         $lon = (float) ($data['lon'] ?? 0);
         $accuracy = (float) ($data['accuracy'] ?? 0);
 
-        $this->playerRepo->updateLocation((int)$session['player_id'], $lat, $lon, $accuracy);
-        $this->playerRepo->logLocation((int)$session['player_id'], $lat, $lon, $accuracy);
+        $this->playerRepo->updateLocation((int) $session['player_id'], $lat, $lon, $accuracy);
+        $this->playerRepo->logLocation((int) $session['player_id'], $lat, $lon, $accuracy);
 
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     }
 
     public function requestHelp(): void
     {
+        header('Content-Type: application/json; charset=utf-8');
+
         $session = $this->getSession();
         if (!$session) {
             $this->unauthorized();
@@ -193,13 +202,89 @@ final class PlayerController
             'status' => 'open',
         ]);
 
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function mapData(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $gameId = (int) $session['game_id'];
+        $playerId = (int) $session['player_id'];
+        $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
+
+        $pois = $this->poiRepo->activeForGame($gameId);
+        $treasures = $this->treasureRepo->visibleForGameWithClaimState($gameId, $playerId, $teamId);
+
+        echo json_encode([
+            'success' => true,
+            'pois' => array_values($pois),
+            'treasures' => array_values($treasures),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function claimTreasure(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $treasureId = (int) ($data['treasure_id'] ?? 0);
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+
+        if ($treasureId <= 0) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'status' => 'invalid_treasure',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $result = $this->treasureRepo->claimForPlayer(
+            $treasureId,
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) ? (int) $session['team_id'] : null,
+            $lat,
+            $lon
+        );
+
+        if (($result['success'] ?? false) === false) {
+            $statusCode = match ($result['status'] ?? 'error') {
+                'not_found' => 404,
+                'too_far' => 409,
+                'already_claimed' => 409,
+                'already_claimed_team' => 409,
+                'empty' => 409,
+                default => 400,
+            };
+
+            http_response_code($statusCode);
+        }
+
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
     }
 
     private function getSession(): ?array
     {
         $token = $_COOKIE['player_session'] ?? null;
-        if (!$token) return null;
+        if (!$token) {
+            return null;
+        }
 
         $session = $this->playerRepo->findBySessionToken(hash('sha256', $token));
 
@@ -213,6 +298,6 @@ final class PlayerController
     private function unauthorized(): void
     {
         http_response_code(401);
-        echo json_encode(['success' => false]);
+        echo json_encode(['success' => false], JSON_UNESCAPED_UNICODE);
     }
 }
