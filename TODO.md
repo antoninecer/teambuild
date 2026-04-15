@@ -24,106 +24,202 @@
 - [x] invite flow
 - [x] režim hry (self_service / moderated)
 - [x] poklady (DB + admin create/edit + mapa)
+- [x] endpoint `/api/player/map-data`
+- [x] endpoint `/api/player/claim`
+- [x] claim logika pokladů
+- [x] zápis do `treasure_claims`
+- [x] zobrazení POI v hráčské mapě
+- [x] zobrazení pokladů v hráčské mapě
+- [x] detail POI / pokladu nad mapou
+- [x] TTS přes browser (`speechSynthesis`)
+- [x] media pro POI (`poi_media`)
+- [x] zobrazení obrázků a YouTube v detailu POI
+- [x] admin formuláře POI rozšířené o média
 
 ---
 
-# 🔥 AKTUÁLNÍ PRIORITA (NEZTRATIT SMĚR)
+# AKTUÁLNÍ PRIORITA
 
-## 🎯 Cíl:
-👉 udělat první FUNKČNÍ HERU (ne jen mapu)
+## Cíl
+👉 přestat vrstvit jen funkce a udělat z toho **čitelnou, hratelnou a hezky působící aplikaci**
 
----
-
-## 🟥 PRIORITA 1 — HERNÍ LOGIKA (KRITICKÉ)
-
-- [ ] načítat POI do hráčské mapy
-- [ ] načítat poklady do hráčské mapy
-- [ ] proximity check (hráč v radiusu)
-- [ ] endpoint: `/api/player/claim`
-- [ ] logika sebrání pokladu
-- [ ] zápis do `treasure_claims`
-- [ ] respektování `limit sebrání`
-- [ ] skrýt poklad po sebrání
-- [ ] stav: „už sebráno“
-- [ ] stav: „prázdné místo“
-
-👉 výsledek:
-hráč přijde → něco se stane → vidí výsledek
+Tj. teď je priorita:
+1. UX / layout hráče
+2. výsledovka hráče
+3. výsledovka admina
+4. XP / level / leaderboard
+5. až potom další rozšiřování mechanik
 
 ---
 
-## 🟧 PRIORITA 2 — PLAYER DASHBOARD
+# PRIORITA 1 — PLAYER UX / MAP SCREEN
 
-- [ ] stránka `/player/dashboard`
-- [ ] zobrazit:
-  - [ ] nickname
-  - [ ] hra
-  - [ ] progress
-- [ ] seznam:
-  - [ ] sebraných pokladů
-  - [ ] navštívených bodů
-- [ ] tlačítko zpět na mapu
-- [ ] jednoduchý „inventory“ view
+## Hlavní problémy, které jsou teď vidět
+- [ ] levý horní box je technický, ne herní (`GPS OK (67m)` nedává hráči smysl)
+- [ ] pravý horní timer vizuálně poskakuje a ruší
+- [ ] spodní tlačítka zbytečně zakrývají mapu
+- [ ] `Obnovit` nemá pro hráče jasný význam
+- [ ] SOS nemá být na hlavní mapové obrazovce
+- [ ] poklad se teď chová příliš automaticky, místo hledání spíš „vyskočí“
+- [ ] UI je spíš utilitní než herní
 
-👉 výsledek:
-hráč chápe, co dělá
+## Udělat
+- [ ] předělat horní levý panel na **player card trigger**
+- [ ] místo textu `GPS OK (xxm)` udělat jen jednoduchý stav přesnosti / ikonu
+- [ ] klik na player card otevře panel s přehledem hráče
+- [ ] horní pravý panel stabilizovat (žádné skákání šířky podle času)
+- [ ] promyslet, zda má vpravo být čas nebo funkční akce (`nejbližší úkol`, `mapa / seznam`, apod.)
+- [ ] odstranit nebo nahradit tlačítko `Obnovit`
+- [ ] přesunout SOS do hráčské karty / menu
+- [ ] udělat spodní UI menší, lehčí a méně invazivní
+- [ ] přejít na průhledné / glass panely nad mapou
+- [ ] místo tvrdých modálů zvážit bottom sheet / vysouvací panel odspodu
+
+## Poklady vs. POI chování
+- [ ] POI se může otevřít automaticky po vstupu do radiusu
+- [ ] poklad se **nemá** otevírat automaticky jen proto, že je hráč poblíž
+- [ ] u pokladu má být pocit hledání a aktivní akce hráče
+- [ ] navrhnout stav typu `něco je poblíž` + akce `prozkoumat`
 
 ---
 
-## 🟨 PRIORITA 3 — ADMIN PŘEHLED
+# PRIORITA 2 — VÝSLEDOVKA / PLAYER CARD
 
-- [ ] seznam hráčů ve hře
+## Chybí
+- [ ] hráčská výsledovka není hotová
+- [ ] není přehled, co hráč získal a jak si vede
+- [ ] není „pocit identity“ hráče
+
+## Udělat
+- [ ] player card / profil hráče
+- [ ] zobrazit nickname
+- [ ] zobrazit tým
+- [ ] zobrazit dobu ve hře / čas od přihlášení
+- [ ] zobrazit navštívená POI
+- [ ] zobrazit počet sebraných pokladů
+- [ ] zobrazit seznam nalezených pokladů
+- [ ] zobrazit progress ve hře
+- [ ] připravit místo pro level / XP / žebříček
+- [ ] přesunout SOS sem
+
+## Později
+- [ ] achievementy / milníky
+- [ ] úrovně / odznaky
+- [ ] historie objevů
+
+---
+
+# PRIORITA 3 — ADMIN UX / VÝSLEDOVKA HRY
+
+## Problém
+- [ ] admin backend je funkční, ale vizuálně působí jako utilita
+- [ ] výsledovka hry není hotová nebo není dobře vidět
+
+## Udělat
+- [ ] admin přehled hráčů ve hře
+- [ ] tabulka / dashboard XP a pořadí
+- [ ] přehled pokladů: kdo našel co
+- [ ] poslední aktivita hráčů
 - [ ] poslední poloha hráče
-- [ ] seznam SOS requestů
+- [ ] SOS requesty na jednom místě
 - [ ] detail hráče
-
-👉 výsledek:
-organizátor vidí, co se děje
+- [ ] detail hry s přehledným dashboard layoutem
 
 ---
 
-## 🟩 PRIORITA 4 — NÁVODY A UX
+# PRIORITA 4 — XP / LEVEL / LEADERBOARD
 
-- [ ] stránka „Návod pro hráče“
-- [ ] stránka „Návod pro admina“
-- [ ] link do menu
-- [ ] krátká nápověda u formulářů:
-  - [ ] radius
-  - [ ] limit sebrání
-  - [ ] režim hry
+## Směr
+👉 hra nemá být jen jednorázová trasa, ale má dát hráči pocit růstu, postupu a srovnání s ostatními
+
+## XP systém
+- [ ] přidat XP hráči
+- [ ] XP za návštěvu POI
+- [ ] XP za nalezení pokladu
+- [ ] XP za dokončení hry
+- [ ] možnost bonusových XP za objev / speciální událost
+
+## Level systém
+- [ ] levely ne lineárně, ale exponenciálně / geometricky
+- [ ] rychlý začátek (hráč musí brzy postoupit)
+- [ ] vyšší levely musí být těžší a mít váhu
+- [ ] připravit stupnici minimálně do levelu 15
+- [ ] level počítat z celkových XP
+- [ ] zobrazit level + název hodnosti
+- [ ] zobrazit progress do dalšího levelu
+
+## Žebříček
+- [ ] leaderboard podle XP
+- [ ] pořadí hráče ve hře
+- [ ] pořadí týmů (později)
+- [ ] „objev“ má umět hráče výrazně posunout v žebříčku
+
+## Alternativní stupnice hodností
+Při zakládání hry musí jít vybrat styl levelů / hodností.
+
+### Udělat
+- [ ] přidat do hry volbu `level_scheme`
+- [ ] admin si při založení hry vybere styl stupnice
+- [ ] mapovat level → název podle zvolené stupnice
+
+### První varianty
+- [ ] `military` — lehký vojenský feeling
+- [ ] `adventure` — průzkumník / dobrodruh / lovec pokladů
+- [ ] `mystic` — tajemný řád / zasvěcení / strážci
+
+### Poznámka
+Nejde o historickou přesnost, ale o historicky uvěřitelný a herně silný pocit.
 
 ---
 
-# 🧭 HERNÍ MECHANIKY (POKLADY)
+# PRIORITA 5 — POKLADY
 
-- [ ] typy pokladů:
-  - [ ] public
-  - [ ] hidden
-  - [ ] individual
-  - [ ] team
-- [ ] viditelnost na mapě
-- [ ] navázání na POI
-- [ ] samostatné poklady
-- [ ] „tajný poklad“ (není na mapě)
-- [ ] „vybráno → prázdné místo“
+## Současný směr ponechat
+👉 poklad zůstává samostatná entita, zatím nebudeme refaktorovat do POI
+
+## Pravidla
+- [x] kdo první najde, ten vybere
+- [x] po sebrání zmizí / změní stav
+- [ ] musí se propsat do hráčovy karty / výsledovky
+- [ ] musí se propsat do admin výsledovky
+- [ ] odlišit víc chování POI vs. treasure v UX
+
+## Další kroky
+- [ ] lépe odlišit marker pokladu od markeru POI
+- [ ] vymyslet UX hledání pokladu bez automatického reveal modalu
+- [ ] volitelně přidat pokladům média až po stabilizaci player UX
 
 ---
 
-# 🧭 SELF-SERVICE REŽIM
+# MEDIA / OBSAH
 
-- [ ] zobrazit POI na mapě
-- [ ] odemykání POI podle vzdálenosti
-- [ ] zobrazit příběh
-- [ ] progress hráče
+## Hotovo
+- [x] POI media přes `poi_media`
+- [x] obrázky v detailu POI
+- [x] YouTube v detailu POI
+- [x] admin formuláře POI rozšířené o média
+
+## Dále
+- [ ] dokončit ukládání médií v adminu včetně uploadu obrázků
+- [ ] ukládání uploadů do `/public/uploads/games/{game_id}/pois/{poi_id}/`
+- [ ] validace uploadu (jpg/png/webp, velikost)
+- [ ] ponechat možnost kombinace: externí historický obrázek + vlastní aktuální fotka + YouTube
+- [ ] neomezovat počet příloh na 3, ale mít 0 až N
+- [ ] stejný systém médií později pro poklady
+
+---
+
+# SELF-SERVICE REŽIM
+
+- [ ] zobrazit progress hráče
 - [ ] dokončení hry
-- [ ] fallback bez organizátora
-- [ ] SOS chování:
-  - [ ] vypnout
-  - [ ] nebo jen logovat
+- [ ] výsledovka bez organizátora
+- [ ] jasné flow bez zásahu admina
+- [ ] SOS v self-service buď vypnout, nebo jen logovat
 
 ---
 
-# 🧭 MODEROVANÝ REŽIM (POZDĚJI)
+# MODEROVANÝ REŽIM (POZDĚJI)
 
 - [ ] admin mapa hráčů
 - [ ] live dashboard
@@ -135,7 +231,7 @@ organizátor vidí, co se děje
 
 ---
 
-# 🧹 STABILIZACE
+# STABILIZACE / ÚKLID
 
 - [ ] odstranit `.DS_Store`
 - [ ] opravit `.gitignore`
@@ -144,180 +240,31 @@ organizátor vidí, co se děje
 - [ ] odstranit warningy
 - [ ] cleanup hotfixů
 - [ ] verzované SQL migrace
+- [ ] zkontrolovat, že TODO neobsahuje staré poznámky a slepé větve
 
 ---
 
-# ⚙️ WORKFLOW
+# WORKFLOW
 
 - [ ] práce přes VS Code SSH
 - [ ] malé commity
 - [ ] push → server pull
 - [ ] DB změny zapisovat do SQL
+- [ ] větší UX zásahy nejdřív zkusit na jedné obrazovce, ne plošně
 
 ---
 
-# 🚀 DALŠÍ KONKRÉTNÍ KROK
+# NEJBLIŽŠÍ KONKRÉTNÍ KROK
 
-👉 IMPLEMENTOVAT:
+## Varianta A — nejvyšší dopad
+- [ ] předělat `player/dashboard.php` do čitelnějšího mapového layoutu
+- [ ] přesunout SOS do player card
+- [ ] odstranit technický text `GPS OK (xxm)`
+- [ ] stabilizovat timer / horní pravý panel
+- [ ] oddělit chování POI a treasure v UX
 
-- [ ] `/api/player/claim`
-- [ ] TreasureRepository → claim()
-- [ ] kontrola vzdálenosti
-- [ ] zápis do DB
-- [ ] návrat JSON (success / already claimed)
+## Varianta B — paralelně
+- [ ] připravit DB a helpery pro XP / level / leaderboard
+- [ ] přidat `level_scheme` do hry
+- [ ] navrhnout první 3 stupnice hodností
 
-👉 tím vznikne PRVNÍ HERní SMYČKA
-
-potrebuju pokud je popis jak mista tak pokladu aby bylo mozne precist objevi se nekde na mape nejake info modul a moznost hlasem precist umis to ?
-Thought for 5s
-
-Ano, tohle umím navrhnout a je to velmi dobrý krok.
-
-A navíc bych to udělal ve dvou vrstvách, aby ses nezasekl na složitosti.
-
-Co přesně bych udělal
-
-Když hráč:
-
-dorazí do bodu,
-nebo najde poklad,
-
-tak se otevře informační panel nad mapou:
-
-název
-popis
-příběh
-obrázek, pokud existuje
-tlačítko:
-Přečíst nahlas
-případně Zastavit čtení
-Nejrychlejší verze
-1. Info panel v mapě
-
-Na player dashboardu přidat skrytý panel, který se otevře:
-
-po vstupu do radiusu POI
-po claimnutí pokladu
-nebo kliknutím na marker
-
-Obsah:
-
-name
-story_text nebo description
-u treasure name + description
-2. Čtení hlasem přes prohlížeč
-
-Použil bych hned:
-
-window.speechSynthesis
-
-To je nejrychlejší, protože:
-
-nic negeneruješ na serveru
-nemusíš ukládat audio
-funguje to hned
-na telefonu to často funguje překvapivě dobře
-
-Například:
-
-vezmeš text
-vytvoříš SpeechSynthesisUtterance
-přehraješ
-
-To je ideální MVP.
-
-Lepší verze později
-
-Až budeš chtít hezčí zážitek:
-
-předgenerované audio u POI
-předgenerované audio u pokladů
-možnost:
-přehrát originální audio
-nebo fallback na browser TTS
-
-To znamená:
-
-ručně nahraný hlas
-nebo AI voice
-a když chybí audio, použije se speech synthesis
-Co bych doporučil teď
-Pro POI
-
-Číst:
-
-story_text
-a když není, tak description
-Pro poklad
-
-Číst:
-
-description
-a když není, tak name
-UX návrh
-
-Po příchodu k bodu:
-
-vyskočí panel
-tlačítka:
-Přehrát hlasem
-Zavřít
-případně Pokračovat
-
-To je přesně ten moment, kdy hra začne působit živě.
-
-Technicky je to snadné
-
-Ano, umím to, a šel bych tímto pořadím:
-
-krok 1
-
-Info modul v player mapě
-
-krok 2
-
-Speech synthesis tlačítko
-
-krok 3
-
-Napojení na:
-
-POI unlock
-treasure claim
-Důležitá poznámka
-
-Na mobilech může být potřeba, aby se hlas spustil až po interakci uživatele:
-
-kliknutí na tlačítko
-ne automaticky bez dotyku
-
-Takže pro první verzi bych nedělal:
-
-automatické čtení samo od sebe
-
-Ale:
-
-otevře se panel
-hráč klikne Přečíst nahlas
-
-To je spolehlivější.
-
-Můj verdikt
-
-Ano.
-A je to velmi dobrý nápad, protože:
-
-POI dostanou atmosféru
-poklady budou působit živě
-sekretariát to pochopí
-hráč dostane jasnou akci
-
-Teď bych to udělal v pořadí:
-info panel → čtení hlasem → claim/unlock napojení
-
-Pošli mi pak:
-
-resources/views/player/dashboard.php
-app/Controllers/Player/PlayerController.php
-
-a uděláme první verzi panelu i s tlačítkem Přečíst nahlas.
