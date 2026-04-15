@@ -5,17 +5,23 @@
     <title>Nový bod (POI)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; max-width: 1000px; }
+        body { font-family: Arial, sans-serif; margin: 40px; max-width: 1100px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input[type="text"], input[type="number"], select, textarea {
+        input[type="text"], input[type="number"], input[type="datetime-local"], select, textarea {
             width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+        }
+        input[type="file"] {
+            width: 100%;
+            box-sizing: border-box;
         }
         textarea { height: 80px; }
         #map { height: 400px; margin-bottom: 20px; border: 1px solid #ccc; }
-        .btn { padding: 10px 14px; cursor: pointer; text-decoration: none; border: 1px solid #999; background: #fff; color: #000; display: inline-block; }
+        .btn { padding: 10px 14px; cursor: pointer; text-decoration: none; border: 1px solid #999; background: #fff; color: #000; display: inline-block; border-radius: 4px; }
         .btn-primary { background: #000; color: #fff; border-color: #000; }
+        .btn-danger { background: #b00020; color: #fff; border-color: #b00020; }
+        .btn-secondary { background: #f3f3f3; }
         .errors { background: #fee; border: 1px solid #fcc; padding: 10px; margin-bottom: 20px; color: #900; }
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .checkbox-group input { margin: 0; }
@@ -26,22 +32,42 @@
             border-top: 1px solid #ddd;
         }
 
-        .media-grid {
-            display: grid;
-            grid-template-columns: 120px 1fr 1fr 120px;
-            gap: 12px;
-            align-items: end;
-            margin-bottom: 12px;
-        }
-
-        .media-grid .form-group {
-            margin-bottom: 0;
-        }
-
         .section-note {
             color: #666;
             font-size: 14px;
             margin-bottom: 15px;
+        }
+
+        .media-row {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            background: #fafafa;
+        }
+
+        .media-row-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr 1fr 140px auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .media-preview {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+            word-break: break-all;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .media-row-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -62,7 +88,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="/admin/games/<?= (int) $game['id'] ?>/pois" method="POST">
+    <form action="/admin/games/<?= (int) $game['id'] ?>/pois" method="POST" enctype="multipart/form-data">
         <div class="grid">
             <div>
                 <div class="form-group">
@@ -136,60 +162,15 @@
             <label for="is_enabled">Aktivní</label>
         </div>
 
-        <?php
-        $oldMedia = $old['media'] ?? [];
-        for ($i = 0; $i < 3; $i++) {
-            $oldMedia[$i] = $oldMedia[$i] ?? [];
-        }
-        ?>
-
         <div class="media-section">
             <h2>Média k bodu</h2>
             <div class="section-note">
-                Můžeš zadat URL obrázku nebo YouTube odkazu. Pro YouTube použij typ <strong>video</strong>.
+                Libovolný počet příloh. Každá příloha může být obrázek z URL, YouTube video, nebo nahraný obrázek.
             </div>
 
-            <?php for ($i = 0; $i < 3; $i++): ?>
-                <div class="media-grid">
-                    <div class="form-group">
-                        <label for="media_<?= $i ?>_type">Typ média</label>
-                        <select id="media_<?= $i ?>_type" name="media[<?= $i ?>][media_type]">
-                            <?php $mediaType = $oldMedia[$i]['media_type'] ?? 'image'; ?>
-                            <option value="image" <?= $mediaType === 'image' ? 'selected' : '' ?>>Obrázek</option>
-                            <option value="video" <?= $mediaType === 'video' ? 'selected' : '' ?>>YouTube video</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="media_<?= $i ?>_file_path">URL média</label>
-                        <input
-                            type="text"
-                            id="media_<?= $i ?>_file_path"
-                            name="media[<?= $i ?>][file_path]"
-                            value="<?= htmlspecialchars($oldMedia[$i]['file_path'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                            placeholder="https://..."
-                        >
-                    </div>
-                    <div class="form-group">
-                        <label for="media_<?= $i ?>_title">Titulek / alt text</label>
-                        <input
-                            type="text"
-                            id="media_<?= $i ?>_title"
-                            name="media[<?= $i ?>][title]"
-                            value="<?= htmlspecialchars($oldMedia[$i]['title'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                            placeholder="Např. Historická fotografie"
-                        >
-                    </div>
-                    <div class="form-group">
-                        <label for="media_<?= $i ?>_sort_order">Pořadí</label>
-                        <input
-                            type="number"
-                            id="media_<?= $i ?>_sort_order"
-                            name="media[<?= $i ?>][sort_order]"
-                            value="<?= htmlspecialchars((string)($oldMedia[$i]['sort_order'] ?? $i), ENT_QUOTES, 'UTF-8') ?>"
-                        >
-                    </div>
-                </div>
-            <?php endfor; ?>
+            <div id="mediaContainer"></div>
+
+            <button type="button" class="btn btn-secondary" onclick="addMediaRow()">+ Přidat přílohu</button>
         </div>
 
         <div style="margin-top: 20px;">
@@ -229,6 +210,98 @@
                 marker = L.marker(e.latlng).addTo(map);
             }
         });
+
+        let mediaIndex = 0;
+        const initialMedia = <?= json_encode(array_values($old['media'] ?? []), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function addMediaRow(data = {}) {
+            const index = mediaIndex++;
+            const container = document.getElementById('mediaContainer');
+
+            const mediaType = data.media_type || 'image';
+            const filePath = data.file_path || '';
+            const title = data.title || '';
+            const sortOrder = data.sort_order ?? index;
+
+            const row = document.createElement('div');
+            row.className = 'media-row';
+            row.innerHTML = `
+                <div class="media-row-grid">
+                    <div class="form-group">
+                        <label for="media_${index}_type">Typ média</label>
+                        <select id="media_${index}_type" name="media[${index}][media_type]">
+                            <option value="image" ${mediaType === 'image' ? 'selected' : ''}>Obrázek</option>
+                            <option value="video" ${mediaType === 'video' ? 'selected' : ''}>YouTube video</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="media_${index}_file_path">Externí URL</label>
+                        <input
+                            type="text"
+                            id="media_${index}_file_path"
+                            name="media[${index}][file_path]"
+                            value="${escapeHtml(filePath)}"
+                            placeholder="https://..."
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="media_file_${index}">Nahrát soubor</label>
+                        <input type="file" id="media_file_${index}" name="media_file_${index}" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="media_${index}_title">Titulek / alt text</label>
+                        <input
+                            type="text"
+                            id="media_${index}_title"
+                            name="media[${index}][title]"
+                            value="${escapeHtml(title)}"
+                            placeholder="Např. Historická fotografie"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="media_${index}_sort_order">Pořadí</label>
+                        <input
+                            type="number"
+                            id="media_${index}_sort_order"
+                            name="media[${index}][sort_order]"
+                            value="${escapeHtml(sortOrder)}"
+                        >
+                    </div>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <button type="button" class="btn btn-danger" onclick="removeMediaRow(this)">Odstranit přílohu</button>
+                </div>
+            `;
+
+            container.appendChild(row);
+        }
+
+        function removeMediaRow(button) {
+            const row = button.closest('.media-row');
+            if (row) {
+                row.remove();
+            }
+        }
+
+        if (initialMedia.length > 0) {
+            initialMedia.forEach(item => addMediaRow(item));
+        } else {
+            addMediaRow();
+        }
     </script>
 </body>
 </html>
