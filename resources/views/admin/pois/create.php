@@ -19,6 +19,30 @@
         .errors { background: #fee; border: 1px solid #fcc; padding: 10px; margin-bottom: 20px; color: #900; }
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .checkbox-group input { margin: 0; }
+
+        .media-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr 1fr 120px;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+
+        .media-grid .form-group {
+            margin-bottom: 0;
+        }
+
+        .section-note {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -73,6 +97,10 @@
                     <label for="story_text">Příběhový text (pro hráče)</label>
                     <textarea id="story_text" name="story_text"><?= htmlspecialchars($old['story_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="tts_text">TTS text (volitelné, pro hlasové čtení)</label>
+                    <textarea id="tts_text" name="tts_text"><?= htmlspecialchars($old['tts_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                </div>
             </div>
             <div>
                 <div id="map"></div>
@@ -108,6 +136,62 @@
             <label for="is_enabled">Aktivní</label>
         </div>
 
+        <?php
+        $oldMedia = $old['media'] ?? [];
+        for ($i = 0; $i < 3; $i++) {
+            $oldMedia[$i] = $oldMedia[$i] ?? [];
+        }
+        ?>
+
+        <div class="media-section">
+            <h2>Média k bodu</h2>
+            <div class="section-note">
+                Můžeš zadat URL obrázku nebo YouTube odkazu. Pro YouTube použij typ <strong>video</strong>.
+            </div>
+
+            <?php for ($i = 0; $i < 3; $i++): ?>
+                <div class="media-grid">
+                    <div class="form-group">
+                        <label for="media_<?= $i ?>_type">Typ média</label>
+                        <select id="media_<?= $i ?>_type" name="media[<?= $i ?>][media_type]">
+                            <?php $mediaType = $oldMedia[$i]['media_type'] ?? 'image'; ?>
+                            <option value="image" <?= $mediaType === 'image' ? 'selected' : '' ?>>Obrázek</option>
+                            <option value="video" <?= $mediaType === 'video' ? 'selected' : '' ?>>YouTube video</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="media_<?= $i ?>_file_path">URL média</label>
+                        <input
+                            type="text"
+                            id="media_<?= $i ?>_file_path"
+                            name="media[<?= $i ?>][file_path]"
+                            value="<?= htmlspecialchars($oldMedia[$i]['file_path'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                            placeholder="https://..."
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="media_<?= $i ?>_title">Titulek / alt text</label>
+                        <input
+                            type="text"
+                            id="media_<?= $i ?>_title"
+                            name="media[<?= $i ?>][title]"
+                            value="<?= htmlspecialchars($oldMedia[$i]['title'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                            placeholder="Např. Historická fotografie"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="media_<?= $i ?>_sort_order">Pořadí</label>
+                        <input
+                            type="number"
+                            id="media_<?= $i ?>_sort_order"
+                            name="media[<?= $i ?>][sort_order]"
+                            value="<?= htmlspecialchars((string)($oldMedia[$i]['sort_order'] ?? $i), ENT_QUOTES, 'UTF-8') ?>"
+                        >
+                    </div>
+                </div>
+            <?php endfor; ?>
+        </div>
+
         <div style="margin-top: 20px;">
             <button type="submit" class="btn btn-primary">Vytvořit bod</button>
         </div>
@@ -135,7 +219,7 @@
         map.on('click', function(e) {
             const lat = e.latlng.lat.toFixed(7);
             const lon = e.latlng.lng.toFixed(7);
-            
+
             latInput.value = lat;
             lonInput.value = lon;
 
