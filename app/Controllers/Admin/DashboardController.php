@@ -8,7 +8,9 @@ final class DashboardController
 {
     private function requireAdmin(): array
     {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
         if (!isset($_SESSION['admin_user'])) {
             header('Location: /admin/login');

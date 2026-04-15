@@ -1,94 +1,199 @@
+<?php
+$error = $_SESSION['admin_error'] ?? null;
+unset($_SESSION['admin_error']);
+?>
 <!DOCTYPE html>
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Administrace</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VentureOut Admin</title>
     <style>
+        :root {
+            --paper: rgba(246, 236, 214, 0.90);
+            --ink: #3b2818;
+            --ink-soft: #6b5240;
+            --accent: #6c4322;
+            --accent-dark: #4f2f17;
+            --shadow: rgba(22, 12, 6, 0.34);
+            --danger: #a51f1f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            max-width: 1100px;
+            margin: 0;
+            min-height: 100vh;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                linear-gradient(rgba(24, 14, 8, 0.28), rgba(24, 14, 8, 0.46)),
+                url('/assets/images/bg/ventureout-map.jpg') center center / cover no-repeat;
         }
 
-        .topbar {
+        .page {
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            gap: 16px;
-            margin-bottom: 30px;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 20px;
+            justify-content: center;
+            padding: 28px 18px;
         }
 
         .card {
-            border: 1px solid #ccc;
-            padding: 20px;
-            border-radius: 8px;
-            background: #fafafa;
+            width: 100%;
+            max-width: 470px;
+            background: var(--paper);
+            border: 1px solid rgba(92, 61, 35, 0.24);
+            border-radius: 18px;
+            box-shadow: 0 20px 40px var(--shadow);
+            padding: 30px 28px;
         }
 
-        .card h2 {
-            margin-top: 0;
+        .brand {
+            text-align: center;
+            margin-bottom: 20px;
         }
 
-        .card p {
-            color: #444;
+        .brand-title {
+            margin: 0;
+            font-size: 42px;
+            line-height: 1;
+            letter-spacing: 0.01em;
+        }
+
+        .brand-subtitle {
+            margin: 10px 0 0;
+            color: var(--ink-soft);
+            font-size: 17px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 30px;
+            line-height: 1.15;
+        }
+
+        .lead {
+            margin: 0 0 22px;
+            color: var(--ink-soft);
+            font-size: 16px;
             line-height: 1.5;
         }
 
-        .btn, button {
-            padding: 10px 14px;
-            cursor: pointer;
-            text-decoration: none;
-            border: 1px solid #999;
-            background: #fff;
-            color: #000;
-            display: inline-block;
+        .error {
+            color: #fff;
+            background: rgba(165, 31, 31, 0.92);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            font-size: 15px;
         }
 
-        .meta {
-            color: #666;
+        form {
+            display: grid;
+            gap: 12px;
+        }
+
+        label {
+            display: block;
             font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 13px;
+            border-radius: 12px;
+            border: 1px solid rgba(92, 61, 35, 0.24);
+            background: rgba(255,255,255,0.56);
+            font-size: 15px;
+            color: var(--ink);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: rgba(108, 67, 34, 0.60);
+            box-shadow: 0 0 0 3px rgba(108, 67, 34, 0.12);
+        }
+
+        .btn {
+            appearance: none;
+            border: 0;
+            border-radius: 12px;
+            padding: 13px 16px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(180deg, #7a4d27, #5e381b);
+            color: #fff4e6;
+            box-shadow: 0 10px 18px rgba(85, 49, 22, 0.28);
+            transition: transform 0.12s ease, opacity 0.12s ease;
+            margin-top: 4px;
+        }
+
+        .btn:hover {
+            opacity: 0.96;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .links {
+            margin-top: 18px;
+            text-align: center;
+        }
+
+        .links a {
+            color: var(--accent-dark);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="topbar">
-        <div>
-            <h1>Administrace</h1>
-            <div class="meta">
-                Přihlášen: <strong><?= htmlspecialchars($adminUser['username'], ENT_QUOTES, 'UTF-8') ?></strong>
-                <?php if (!empty($adminUser['global_role'])): ?>
-                    | globální role: <strong><?= htmlspecialchars($adminUser['global_role'], ENT_QUOTES, 'UTF-8') ?></strong>
-                <?php endif; ?>
+<div class="page">
+    <div class="card">
+        <div class="brand">
+            <h2 class="brand-title">VentureOut</h2>
+            <div class="brand-subtitle">Správa her, bodů, pokladů a hráčů</div>
+        </div>
+
+        <h1>Admin rozhraní</h1>
+        <p class="lead">
+            Přihlaš se do administrace a vstup do organizační části hry.
+        </p>
+
+        <?php if ($error): ?>
+            <div class="error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+
+        <form method="post" action="/admin/login">
+            <div>
+                <label for="username">Uživatelské jméno</label>
+                <input id="username" name="username" type="text" required>
             </div>
-        </div>
 
-        <form method="post" action="/admin/logout">
-            <button type="submit">Odhlásit</button>
+            <div>
+                <label for="password">Heslo</label>
+                <input id="password" name="password" type="password" required>
+            </div>
+
+            <button class="btn" type="submit">Přihlásit se</button>
         </form>
-    </div>
 
-    <div class="cards">
-        <div class="card">
-            <h2>Správa her</h2>
-            <p>
-                Přehled her, zakládání nových her, detail hry, body zájmu, pozvánky, týmy a další herní nastavení.
-            </p>
-            <a class="btn" href="/admin/games">Otevřít správu her</a>
-        </div>
-
-        <div class="card">
-            <h2>Správa uživatelů</h2>
-            <p>
-                Uživatelé administrace, globální správci, herní správci, změna hesla a vytváření nových účtů.
-            </p>
-            <a class="btn" href="/admin/users">Otevřít správu uživatelů</a>
+        <div class="links">
+            <a href="/">← Zpět na rozcestník</a>
         </div>
     </div>
+</div>
 </body>
 </html>

@@ -35,13 +35,24 @@ use App\Controllers\Admin\PoiController;
 use App\Controllers\Admin\TreasureController;
 use App\Controllers\Admin\UserController;
 use App\Controllers\Player\PlayerController;
+use App\Repositories\GameRepository;
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
-// ROOT
-if ($uri === '/' || $uri === '') {
-    header('Location: /admin');
+// ROOT LANDING
+if (($uri === '/' || $uri === '') && $method === 'GET') {
+    $gameRepo = new GameRepository();
+    $allGames = $gameRepo->all();
+
+    $publicGames = array_values(array_filter($allGames, static function (array $game): bool {
+        $status = (string) ($game['status'] ?? '');
+        $registrationEnabled = (int) ($game['registration_enabled'] ?? 0) === 1;
+
+        return $registrationEnabled && in_array($status, ['registration_open', 'active'], true);
+    }));
+
+    require __DIR__ . '/../resources/views/home/index.php';
     exit;
 }
 

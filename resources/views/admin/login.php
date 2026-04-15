@@ -1,5 +1,4 @@
 <?php
-session_start();
 $error = $_SESSION['admin_error'] ?? null;
 unset($_SESSION['admin_error']);
 ?>
