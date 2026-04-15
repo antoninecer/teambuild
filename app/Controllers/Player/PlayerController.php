@@ -10,6 +10,8 @@ use App\Repositories\InviteRepository;
 use App\Repositories\PlayerRepository;
 use App\Repositories\PoiRepository;
 use App\Repositories\TreasureRepository;
+use App\Support\Database;
+use PDO;
 
 final class PlayerController
 {
@@ -155,6 +157,9 @@ final class PlayerController
     public function dashboard(int $playerId, array $game): void
     {
         $player = $this->playerRepo->findById($playerId);
+        $playerStats = $this->buildPlayerStats($playerId, (int) $game['id']);
+        $leaderboard = $this->buildLeaderboard((int) $game['id']);
+
         require __DIR__ . '/../../../resources/views/player/dashboard.php';
     }
 
@@ -283,6 +288,92 @@ final class PlayerController
         }
 
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+    private function buildPlayerStats(int $playerId, int $gameId): array
+    {
+        $pdo = Database::connection();
+
+        $totalsStmt = $pdo->prepare(
+            'SELECT
+                (SELECT COUNT(*) FROM pois WHERE game_id = :game_id AND is_enabled = 1) AS total_pois,
+                (SELECT COUNT(*) FROM treasures WHERE game_id = :game_id AND is_enabled = 1) AS total_treasures'
+        );
+        $totalsStmt->execute(['game_id' => $gameId]);
+        $totals = $totalsStmt->fetch(PDO::FETCH_ASSOC) ?: ['total_pois' => 0, 'total_treasures' => 0];
+
+        $playerStmt = $pdo->prepare(
+            'SELECT
+                COALESCE(SUM(COALESCE(t.points, 0)), 0) AS points,
+                COUNT(t.id) AS treasures_found
+             FROM treasure_claims tc
+             INNER JOIN treasures t ON t.id = tc.treasure_id
+             WHERE tc.player_id = :player_id
+               AND t.game_id = :game_id'
+        );
+        $playerStmt->execute([
+            'player_id' => $playerId,
+            'game_id' => $gameId,
+        ]);
+        $playerRow = $playerStmt->fetch(PDO::FETCH_ASSOC) ?: ['points' => 0, 'treasures_found' => 0];
+
+        $leaderboard = $this->buildLeaderboard($gameId);
+
+        $rank = 0;
+        foreach ($leaderboard as $row) {
+            if ((int) $row['player_id'] === $playerId) {
+                $rank = (int) $row['rank'];
+                break;
+            }
+        }
+
+        $tasksTotal = (int) $totals['total_pois'] + (int) $totals['total_treasures'];
+        $tasksDone = (int) $playerRow['treasures_found']; // zatím reálně máme jen claimnuté poklady
+        $progressPercent = $tasksTotal > 0 ? (int) round(($tasksDone / $tasksTotal) * 100) : 0;
+
+        return [
+            'points' => (int) $playerRow['points'],
+            'treasures_found' => (int) $playerRow['treasures_found'],
+            'total_pois' => (int) $totals['total_pois'],
+            'total_treasures' => (int) $totals['total_treasures'],
+            'tasks_total' => $tasksTotal,
+            'tasks_done' => $tasksDone,
+            'progress_percent' => $progressPercent,
+            'rank' => $rank,
+        ];
+    }
+
+    private function buildLeaderboard(int $gameId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT
+                p.id AS player_id,
+                p.nickname,
+                COALESCE(SUM(COALESCE(t.points, 0)), 0) AS points,
+                COUNT(t.id) AS treasures_found
+             FROM players p
+             LEFT JOIN treasure_claims tc
+                ON tc.player_id = p.id
+             LEFT JOIN treasures t
+                ON t.id = tc.treasure_id
+               AND t.game_id = :game_id
+             WHERE p.game_id = :game_id
+             GROUP BY p.id, p.nickname
+             ORDER BY points DESC, treasures_found DESC, p.nickname ASC'
+        );
+
+        $stmt->execute(['game_id' => $gameId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $rank = 1;
+        foreach ($rows as &$row) {
+            $row['rank'] = $rank++;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     private function getSession(): ?array

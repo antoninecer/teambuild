@@ -6,51 +6,165 @@
     <title>Hra: <?= htmlspecialchars($game['name'], ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
-        #map { height: 100%; width: 100%; z-index: 1; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
 
         .ui-overlay {
-            position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1000;
-            display: flex; justify-content: space-between; pointer-events: none;
-        }
-        .ui-box {
-            background: rgba(255,255,255,0.92); padding: 10px; border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); pointer-events: auto;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            gap: 10px;
         }
 
-        .bottom-actions {
-            position: absolute; bottom: 20px; left: 10px; right: 10px; z-index: 1000;
-            display: flex; gap: 10px;
+        .ui-box {
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(22px) saturate(150%);
+            -webkit-backdrop-filter: blur(22px) saturate(150%);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow:
+                0 2px 10px rgba(0,0,0,0.06),
+                inset 0 1px 0 rgba(255,255,255,0.10);
+            pointer-events: auto;
+            color: rgba(18,18,18,0.88);
         }
-        .btn {
-            flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold;
-            font-size: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
+
+        .player-box {
+            cursor: pointer;
+            min-width: 170px;
+            padding: 11px 13px;
         }
-        .btn-help { background: #d32f2f; color: #fff; }
-        .btn-info { background: #1976d2; color: #fff; }
+
+        .context-box {
+            cursor: pointer;
+            min-width: 86px;
+            text-align: center;
+            padding: 10px 12px;
+        }
+
+        .player-name {
+            font-weight: 700;
+            font-size: 15px;
+            line-height: 1.2;
+            margin-bottom: 4px;
+            color: rgba(20,20,20,0.92);
+        }
+
+        .player-subline {
+            font-size: 12px;
+            line-height: 1.2;
+            color: rgba(20,20,20,0.72);
+        }
+
+        .context-icon {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: rgba(20,20,20,0.88);
+        }
+
+        .context-subline {
+            margin-top: 3px;
+            font-size: 11px;
+            color: rgba(20,20,20,0.68);
+            line-height: 1.1;
+        }
 
         .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.62);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
         }
+
         .modal-content {
-            background: #fff; padding: 20px; border-radius: 12px; width: 85%; max-width: 420px;
-            max-height: 80vh; overflow: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 16px;
+            width: 88%;
+            max-width: 460px;
+            max-height: 82vh;
+            overflow: auto;
+            box-shadow: 0 14px 28px rgba(0,0,0,0.28);
         }
-        .modal-content h2 { margin-top: 0; }
+
+        .glass-modal {
+            background: rgba(255,255,255,0.10);
+            backdrop-filter: blur(26px) saturate(150%);
+            -webkit-backdrop-filter: blur(26px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow:
+                0 8px 24px rgba(0,0,0,0.12),
+                inset 0 1px 0 rgba(255,255,255,0.10);
+            color: rgba(18,18,18,0.94);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+        }
+
         .modal-content textarea {
-            width: 100%; height: 100px; margin: 10px 0; border: 1px solid #ccc;
-            padding: 10px; box-sizing: border-box;
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            border: 1px solid rgba(0,0,0,0.14);
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.84);
         }
-        .modal-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .modal-btn {
-            flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
         .accuracy-warn {
-            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
-            background: #ff9800; color: #fff; padding: 5px 15px; border-radius: 20px;
-            font-size: 12px; display: none; z-index: 1000;
+            position: absolute;
+            top: 66px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 152, 0, 0.84);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
         }
 
         .poi-type {
@@ -97,26 +211,261 @@
             border-radius: 10px;
             margin-bottom: 10px;
         }
+
+        .player-card-note {
+            font-size: 13px;
+            color: rgba(20,20,20,0.74);
+            margin-bottom: 16px;
+        }
+
+        .player-card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 14px 0 18px;
+        }
+
+        .player-stat {
+            background: rgba(255,255,255,0.22);
+            border-radius: 14px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .player-stat-label {
+            font-size: 12px;
+            color: rgba(20,20,20,0.64);
+            margin-bottom: 4px;
+        }
+
+        .player-stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: rgba(15,15,15,0.92);
+        }
+
+        .player-progress {
+            margin: 16px 0 18px;
+        }
+
+        .player-progress-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: rgba(20,20,20,0.78);
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.24);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(25,118,210,0.82), rgba(76,175,80,0.82));
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .leaderboard-table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: rgba(20,20,20,0.60);
+        }
+
+        .leaderboard-highlight {
+            background: rgba(255,255,255,0.18);
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .results-box {
+            background: rgba(255,255,255,0.20);
+            border-radius: 14px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .results-label {
+            font-size: 12px;
+            color: rgba(20,20,20,0.62);
+            margin-bottom: 4px;
+        }
+
+        .results-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: rgba(15,15,15,0.92);
+        }
+
+        @media (max-width: 520px) {
+            .ui-overlay {
+                top: 8px;
+                left: 8px;
+                right: 8px;
+                gap: 8px;
+            }
+
+            .player-box {
+                min-width: 145px;
+                padding: 10px 11px;
+            }
+
+            .context-box {
+                min-width: 78px;
+                padding: 9px 10px;
+            }
+
+            .player-card-grid,
+            .results-summary {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .leaderboard-table {
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
 
     <div class="ui-overlay">
-        <div class="ui-box">
-            <strong><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></strong>
-            <div id="status">Hledám GPS...</div>
+        <div class="ui-box player-box" onclick="openPlayerCard()">
+            <div class="player-name"><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></div>
+            <div id="status" class="player-subline">Zjišťuji polohu…</div>
         </div>
-        <div class="ui-box">
-            <div id="timer">--:--:--</div>
+
+        <div class="ui-box context-box" onclick="openResultsModal()">
+            <div class="context-icon">📋</div>
+            <div class="context-subline">Výsledky</div>
         </div>
     </div>
 
     <div id="accuracy-warn" class="accuracy-warn">Slabý signál GPS</div>
 
-    <div class="bottom-actions">
-        <button class="btn btn-help" onclick="openHelp()">POMOC / SOS</button>
-        <button class="btn btn-info" onclick="reloadMapData()">OBNOVIT</button>
+    <div id="playerModal" class="modal">
+        <div class="modal-content glass-modal">
+            <h2><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></h2>
+            <div class="player-card-note">
+                Tvoje karta hráče, body, úkoly a přehled postupu ve hře.
+            </div>
+
+            <div class="player-card-grid">
+                <div class="player-stat">
+                    <div class="player-stat-label">Body</div>
+                    <div class="player-stat-value" id="playerPoints"><?= (int) ($playerStats['points'] ?? 0) ?></div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-label">Pořadí</div>
+                    <div class="player-stat-value" id="playerRank">#<?= (int) ($playerStats['rank'] ?? 0) ?></div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-label">Poklady</div>
+                    <div class="player-stat-value" id="playerTreasures"><?= (int) ($playerStats['treasures_found'] ?? 0) ?></div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-label">Úkoly hotovo</div>
+                    <div class="player-stat-value" id="playerTasksDone"><?= (int) ($playerStats['tasks_done'] ?? 0) ?></div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-label">Úkolů celkem</div>
+                    <div class="player-stat-value" id="playerTasksTotal"><?= (int) ($playerStats['tasks_total'] ?? 0) ?></div>
+                </div>
+                <div class="player-stat">
+                    <div class="player-stat-label">Stav GPS</div>
+                    <div class="player-stat-value" id="playerGpsState">…</div>
+                </div>
+            </div>
+
+            <div class="player-progress">
+                <div class="player-progress-top">
+                    <span>Progress hry</span>
+                    <span id="playerProgressLabel"><?= (int) ($playerStats['progress_percent'] ?? 0) ?> %</span>
+                </div>
+                <div class="progress-track">
+                    <div id="playerProgressFill" class="progress-fill" style="width: <?= (int) ($playerStats['progress_percent'] ?? 0) ?>%;"></div>
+                </div>
+            </div>
+
+            <div class="modal-btns">
+                <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="openResultsFromPlayerCard()">Výsledovka</button>
+                <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="openHelpFromPlayerCard()">SOS / Pomoc</button>
+                <button class="modal-btn" style="background:#eee;" onclick="closePlayerCard()">Zavřít</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultsModal" class="modal">
+        <div class="modal-content glass-modal">
+            <h2>Výsledovka</h2>
+
+            <div class="results-summary">
+                <div class="results-box">
+                    <div class="results-label">Tvoje body</div>
+                    <div class="results-value" id="resultsMyPoints"><?= (int) ($playerStats['points'] ?? 0) ?></div>
+                </div>
+                <div class="results-box">
+                    <div class="results-label">Pořadí</div>
+                    <div class="results-value" id="resultsMyRank">#<?= (int) ($playerStats['rank'] ?? 0) ?></div>
+                </div>
+                <div class="results-box">
+                    <div class="results-label">Poklady</div>
+                    <div class="results-value" id="resultsMyTreasures"><?= (int) ($playerStats['treasures_found'] ?? 0) ?></div>
+                </div>
+            </div>
+
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Hráč</th>
+                        <th>Body</th>
+                        <th>Poklady</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($leaderboard as $row): ?>
+                        <tr class="<?= (int) $row['player_id'] === (int) $player['id'] ? 'leaderboard-highlight' : '' ?>">
+                            <td>#<?= (int) $row['rank'] ?></td>
+                            <td><?= htmlspecialchars($row['nickname'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td><?= (int) $row['points'] ?></td>
+                            <td><?= (int) $row['treasures_found'] ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <div class="modal-btns" style="margin-top:16px;">
+                <button class="modal-btn" style="background:#eee;" onclick="closeResultsModal()">Zavřít</button>
+            </div>
+        </div>
     </div>
 
     <div id="helpModal" class="modal">
@@ -152,6 +501,9 @@
         const gameSlug = "<?= htmlspecialchars($game['slug'], ENT_QUOTES, 'UTF-8') ?>";
         const mapCenter = [<?= (float) ($game['map_center_lat'] ?? 50.0755) ?>, <?= (float) ($game['map_center_lon'] ?? 14.4378) ?>];
         const mapZoom = <?= (int) ($game['map_default_zoom'] ?? 14) ?>;
+        const gameStartedAt = new Date().getTime();
+
+        const initialPlayerStats = <?= json_encode($playerStats, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
         const map = L.map('map', { zoomControl: false }).setView(mapCenter, mapZoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -263,13 +615,40 @@
             });
         }
 
+        function getGpsLabel(acc) {
+            if (acc <= 20) {
+                return '🟢 Přesná poloha';
+            }
+            if (acc <= 50) {
+                return '🟡 Slabší signál';
+            }
+            return '🟠 Nepřesná poloha';
+        }
+
+        function updatePlayerCardStats() {
+            const gpsState = lastPos ? getGpsLabel(Number(lastPos.acc || 999)) : '…';
+            document.getElementById('playerGpsState').innerText = gpsState;
+
+            document.getElementById('playerPoints').innerText = String(initialPlayerStats.points || 0);
+            document.getElementById('playerRank').innerText = '#' + String(initialPlayerStats.rank || 0);
+            document.getElementById('playerTreasures').innerText = String(initialPlayerStats.treasures_found || 0);
+            document.getElementById('playerTasksDone').innerText = String(initialPlayerStats.tasks_done || 0);
+            document.getElementById('playerTasksTotal').innerText = String(initialPlayerStats.tasks_total || 0);
+            document.getElementById('playerProgressLabel').innerText = String(initialPlayerStats.progress_percent || 0) + ' %';
+            document.getElementById('playerProgressFill').style.width = String(initialPlayerStats.progress_percent || 0) + '%';
+
+            document.getElementById('resultsMyPoints').innerText = String(initialPlayerStats.points || 0);
+            document.getElementById('resultsMyRank').innerText = '#' + String(initialPlayerStats.rank || 0);
+            document.getElementById('resultsMyTreasures').innerText = String(initialPlayerStats.treasures_found || 0);
+        }
+
         function updateLocation(pos) {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             const acc = pos.coords.accuracy;
             lastPos = { lat, lon, acc };
 
-            document.getElementById('status').innerText = 'GPS OK (' + Math.round(acc) + 'm)';
+            document.getElementById('status').innerText = getGpsLabel(acc);
             document.getElementById('accuracy-warn').style.display = (acc > 50) ? 'block' : 'none';
 
             if (!userMarker) {
@@ -288,12 +667,13 @@
                 body: JSON.stringify({ lat, lon, accuracy: acc })
             }).catch(console.warn);
 
+            updatePlayerCardStats();
             checkNearbyAutoOpen();
         }
 
         function handleError(err) {
             console.warn('ERROR(' + err.code + '): ' + err.message);
-            document.getElementById('status').innerText = 'Chyba GPS: ' + err.message;
+            document.getElementById('status').innerText = '🔴 GPS problém';
         }
 
         if (navigator.geolocation) {
@@ -359,6 +739,7 @@
                     clearMarkers();
                     renderPois();
                     renderTreasures();
+                    updatePlayerCardStats();
                     checkNearbyAutoOpen();
                 })
                 .catch(err => {
@@ -496,7 +877,20 @@
 
                 if (data.success) {
                     alert('Poklad byl úspěšně sebrán.');
+                    initialPlayerStats.points = Number(initialPlayerStats.points || 0) + Number(currentDetail.points || 0);
+                    initialPlayerStats.treasures_found = Number(initialPlayerStats.treasures_found || 0) + 1;
+                    initialPlayerStats.tasks_done = Math.min(
+                        Number(initialPlayerStats.tasks_total || 0),
+                        Number(initialPlayerStats.tasks_done || 0) + 1
+                    );
+                    if (Number(initialPlayerStats.tasks_total || 0) > 0) {
+                        initialPlayerStats.progress_percent = Math.round(
+                            (Number(initialPlayerStats.tasks_done || 0) / Number(initialPlayerStats.tasks_total || 1)) * 100
+                        );
+                    }
+
                     closePoiModal();
+                    updatePlayerCardStats();
                     reloadMapData();
                     return;
                 }
@@ -540,15 +934,35 @@
                 }
             });
 
-            treasures.forEach(treasure => {
-                const dist = distanceMeters(lastPos.lat, lastPos.lon, Number(treasure.lat), Number(treasure.lon));
-                const key = 'treasure-' + treasure.id;
+            // Poklady se automaticky neotevírají.
+        }
 
-                if (dist <= Number(treasure.radius_m || 0) && !openedAutoKeys.has(key)) {
-                    openedAutoKeys.add(key);
-                    openTreasureDetail(treasure);
-                }
-            });
+        function openPlayerCard() {
+            updatePlayerCardStats();
+            document.getElementById('playerModal').style.display = 'flex';
+        }
+
+        function closePlayerCard() {
+            document.getElementById('playerModal').style.display = 'none';
+        }
+
+        function openResultsModal() {
+            updatePlayerCardStats();
+            document.getElementById('resultsModal').style.display = 'flex';
+        }
+
+        function closeResultsModal() {
+            document.getElementById('resultsModal').style.display = 'none';
+        }
+
+        function openResultsFromPlayerCard() {
+            closePlayerCard();
+            openResultsModal();
+        }
+
+        function openHelpFromPlayerCard() {
+            closePlayerCard();
+            openHelp();
         }
 
         function openHelp() {
@@ -578,23 +992,8 @@
             });
         }
 
-        const endsAt = new Date("<?= $game['ends_at'] ?>").getTime();
-        setInterval(function () {
-            const now = new Date().getTime();
-            const dist = endsAt - now;
-
-            if (dist < 0) {
-                document.getElementById('timer').innerHTML = 'KONEC HRY';
-                return;
-            }
-
-            const hours = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((dist % (1000 * 60)) / 1000);
-            document.getElementById('timer').innerHTML = hours + 'h ' + minutes + 'm ' + seconds + 's';
-        }, 1000);
-
         reloadMapData();
+        updatePlayerCardStats();
     </script>
 </body>
 </html>
