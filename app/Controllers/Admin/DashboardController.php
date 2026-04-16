@@ -20,7 +20,7 @@ final class DashboardController
         return $_SESSION['admin_user'];
     }
 
-    public function headerStatus(): void
+public function headerStatus(): void
 {
     $this->requireAdmin();
 
@@ -57,16 +57,14 @@ final class DashboardController
             e.player_id,
             e.game_id,
             e.poi_id,
-            e.treasure_id,
+            e.payload_json,
             p.nickname AS player_nickname,
             g.name AS game_name,
-            poi.name AS poi_name,
-            t.name AS treasure_name
+            poi.name AS poi_name
          FROM events e
          LEFT JOIN players p ON p.id = e.player_id
          LEFT JOIN games g ON g.id = e.game_id
          LEFT JOIN pois poi ON poi.id = e.poi_id
-         LEFT JOIN treasures t ON t.id = e.treasure_id
          ORDER BY e.created_at DESC
          LIMIT 30"
     );
@@ -88,23 +86,35 @@ final class DashboardController
 
     foreach ($eventRows as $row) {
         $type = (string) $row['event_type'];
+        $payload = [];
+
+        if (!empty($row['payload_json'])) {
+            $decoded = json_decode((string) $row['payload_json'], true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
 
         if ($type === 'treasure_claimed') {
+            $treasureName = (string) ($payload['treasure_name'] ?? $payload['name'] ?? 'poklad');
+
             $events[] = [
                 'id' => 'event-' . $row['id'],
                 'type' => 'treasure_claimed',
                 'severity' => 'info',
-                'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' sebral poklad ' . ($row['treasure_name'] ?: ''),
+                'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' sebral poklad ' . $treasureName,
                 'created_at' => $row['created_at'],
                 'game_id' => (int) $row['game_id'],
                 'player_id' => (int) $row['player_id'],
             ];
         } elseif ($type === 'poi_visited') {
+            $poiName = (string) ($row['poi_name'] ?: ($payload['poi_name'] ?? 'POI'));
+
             $events[] = [
                 'id' => 'event-' . $row['id'],
                 'type' => 'poi_completed',
                 'severity' => 'info',
-                'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' dokončil POI ' . ($row['poi_name'] ?: ''),
+                'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' dokončil POI ' . $poiName,
                 'created_at' => $row['created_at'],
                 'game_id' => (int) $row['game_id'],
                 'player_id' => (int) $row['player_id'],
@@ -126,7 +136,6 @@ final class DashboardController
         'events' => array_values($events),
     ], JSON_UNESCAPED_UNICODE);
 }
-
     public function index(): void
     {
         $adminUser = $this->requireAdmin();
