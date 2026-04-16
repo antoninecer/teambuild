@@ -166,45 +166,71 @@ final class GameController
     }
 
     public function playerDetail(int $playerId): void
-    {
-        $this->requireAdmin();
+{
+    $this->requireAdmin();
 
-        $playerRepo = new PlayerRepository();
-        $player = $playerRepo->findById($playerId);
+    $playerRepo = new PlayerRepository();
+    $player = $playerRepo->findById($playerId);
 
-        if (!$player) {
-            http_response_code(404);
-            echo 'Hráč nebyl nalezen.';
-            exit;
-        }
-
-        $gameRepo = new GameRepository();
-        $game = $gameRepo->findById((int) $player['game_id']);
-
-        $pdo = Database::connection();
-
-        // Treasures found
-        $treasuresStmt = $pdo->prepare(
-            'SELECT tc.*, t.name, t.points
-             FROM treasure_claims tc
-             JOIN treasures t ON tc.treasure_id = t.id
-             WHERE tc.player_id = :player_id
-             ORDER BY tc.claimed_at DESC'
-        );
-        $treasuresStmt->execute(['player_id' => $playerId]);
-        $claimedTreasures = $treasuresStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Location history
-        $locationStmt = $pdo->prepare(
-            'SELECT *
-             FROM location_log
-             WHERE player_id = :player_id
-             ORDER BY created_at DESC
-             LIMIT 100'
-        );
-        $locationStmt->execute(['player_id' => $playerId]);
-        $locationHistory = $locationStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        require __DIR__ . '/../../../resources/views/admin/players/show.php';
+    if (!$player) {
+        http_response_code(404);
+        echo 'Hráč nebyl nalezen.';
+        exit;
     }
+
+    $gameRepo = new GameRepository();
+    $game = $gameRepo->findById((int) $player['game_id']);
+
+    $pdo = Database::connection();
+
+    // Treasures found
+    $treasuresStmt = $pdo->prepare(
+        'SELECT tc.*, t.name, t.points
+         FROM treasure_claims tc
+         JOIN treasures t ON tc.treasure_id = t.id
+         WHERE tc.player_id = :player_id
+         ORDER BY tc.claimed_at DESC'
+    );
+    $treasuresStmt->execute(['player_id' => $playerId]);
+    $claimedTreasures = $treasuresStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Location history
+    $locationStmt = $pdo->prepare(
+        'SELECT *
+         FROM location_log
+         WHERE player_id = :player_id
+         ORDER BY created_at DESC
+         LIMIT 100'
+    );
+    $locationStmt->execute(['player_id' => $playerId]);
+    $locationHistory = $locationStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Last known position
+    $lastKnownPosition = $locationHistory[0] ?? null;
+
+    // Active SOS for this player
+    $helpStmt = $pdo->prepare(
+        'SELECT *
+         FROM help_requests
+         WHERE player_id = :player_id
+           AND status IN (\'open\', \'acknowledged\')
+         ORDER BY created_at DESC
+         LIMIT 1'
+    );
+    $helpStmt->execute(['player_id' => $playerId]);
+    $activeHelpRequest = $helpStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+    // Recent player events
+    $eventsStmt = $pdo->prepare(
+        'SELECT *
+         FROM events
+         WHERE player_id = :player_id
+         ORDER BY created_at DESC
+         LIMIT 20'
+    );
+    $eventsStmt->execute(['player_id' => $playerId]);
+    $recentEvents = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    require __DIR__ . '/../../../resources/views/admin/players/show.php';
+}
 }

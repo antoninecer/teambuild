@@ -73,4 +73,59 @@ final class HelpRepository
 
         return $stmt->fetchAll();
     }
+
+    public function acknowledge(int $helpId): bool
+{
+    $pdo = Database::connection();
+
+    $stmt = $pdo->prepare(
+        "UPDATE help_requests
+         SET status = 'acknowledged'
+         WHERE id = :id
+           AND status = 'open'"
+    );
+
+    $stmt->execute(['id' => $helpId]);
+
+    return $stmt->rowCount() > 0;
+}
+
+public function resolve(int $helpId): bool
+{
+    $pdo = Database::connection();
+
+    $stmt = $pdo->prepare(
+        "UPDATE help_requests
+         SET status = 'resolved'
+         WHERE id = :id
+           AND status IN ('open', 'acknowledged')"
+    );
+
+    $stmt->execute(['id' => $helpId]);
+
+    return $stmt->rowCount() > 0;
+}
+
+public function findById(int $helpId): ?array
+{
+    $pdo = Database::connection();
+
+    $stmt = $pdo->prepare(
+        "SELECT 
+            hr.*,
+            p.nickname AS player_nickname,
+            g.name AS game_name
+         FROM help_requests hr
+         JOIN players p ON p.id = hr.player_id
+         JOIN games g ON g.id = hr.game_id
+         WHERE hr.id = :id
+         LIMIT 1"
+    );
+
+    $stmt->execute(['id' => $helpId]);
+
+    $row = $stmt->fetch();
+
+    return $row ?: null;
+}
 }

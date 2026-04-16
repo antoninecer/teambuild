@@ -94,6 +94,16 @@ if ($method === 'GET' && $uri === '/admin/api/header-status') {
     exit;
 }
 
+if ($method === 'POST' && preg_match('#^/admin/api/help/(\d+)/acknowledge$#', $uri, $matches)) {
+    (new \App\Controllers\Admin\DashboardController())->acknowledgeHelp((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'POST' && preg_match('#^/admin/api/help/(\d+)/resolve$#', $uri, $matches)) {
+    (new \App\Controllers\Admin\DashboardController())->resolveHelp((int) $matches[1]);
+    exit;
+}
+
 if ($method === 'POST' && preg_match('#^/admin/users/(\d+)/toggle$#', $uri, $matches)) {
     (new UserController())->toggle((int) $matches[1]);
     exit;

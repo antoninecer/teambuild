@@ -161,3 +161,37 @@
     .admin-alerts { width: 100%; }
     .alerts-panel { right: auto; left: 0; width: 100%; }
 }
+
+.alert-item-detail {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #5b4636;
+}
+
+.alert-item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.alert-item-action {
+    appearance: none;
+    border: 1px solid #b79f8c;
+    background: #fff8f1;
+    color: #4f2f1a;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.alert-item-action:hover {
+    background: #f4eadf;
+}
+
+.alert-item-action:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
