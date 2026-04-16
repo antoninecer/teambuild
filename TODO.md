@@ -1,521 +1,228 @@
 # TODO
 
-## Co je skutečně hotové
-- [x] databáze + základní tabulky
-- [x] struktura projektu
-- [x] DB připojení (PHP)
-- [x] admin uživatelé
-- [x] admin login
-- [x] základ admin dashboardu
-- [x] seznam her + detail hry
+Tento soubor je přepsaný podle skutečného stavu repozitáře, ne podle původního plánu.
+
+---
+
+## Ověřeně hotové
+
+### Základ projektu
+- [x] ruční router v `public/index.php`
+- [x] DB připojení přes `App\Support\Database`
+- [x] repository vrstva pro users / games / invites / teams / players / pois / help / treasures
+- [x] landing stránka `/`
+- [x] základní admin layout a sdílený header/footer
+
+### Admin autentizace a uživatelé
+- [x] admin login / logout
+- [x] kontrola session pro admin část
+- [x] seznam admin uživatelů
+- [x] vytvoření admin uživatele
+- [x] aktivace / deaktivace uživatele
+- [x] změna hesla admin uživatele
+
+### Hry
+- [x] seznam her
 - [x] vytvoření hry
-- [x] invite flow + QR / link
-- [x] registrace hráče (backend + frontend)
-- [x] player session
-- [x] mapa hráče (Leaflet)
-- [x] GPS tracking
-- [x] API: poloha
-- [x] API: SOS (základní endpoint)
-- [x] režim hry (`self_service` / `moderated`)
-- [x] editor POI (včetně mapy)
-- [x] poklady (DB + admin create/edit + mapa)
-- [x] endpoint `/api/player/map-data`
-- [x] endpoint `/api/player/claim`
-- [x] claim logika pokladů
+- [x] detail hry
+- [x] stav hry (`draft`, `registration_open`, `active`, `finished`, `archived`)
+- [x] režim hry (`self_service`, `moderated`)
+- [x] `intro_text`, map center, zoom, `session_cookie_days`
+- [x] veřejný odkaz na hru z detailu hry
+
+### Invite flow
+- [x] seznam invite kódů pro hru
+- [x] vytvoření invite kódu
+- [x] vazba invite -> team
+- [x] max uses u invite
+- [x] smazání invite
+- [x] QR / pozvánkový flow je v UI i backendu napojený
+
+### POI
+- [x] seznam POI pro hru
+- [x] vytvoření POI
+- [x] editace POI
+- [x] smazání POI
+- [x] Leaflet mapa v admin formuláři POI
+- [x] typy POI (`start_point`, `story_point`, `checkpoint`, `rescue_point`, `hint_point`, `finish_point`, `meetup_point`)
+- [x] `radius_m`, `sort_order`, `active_from`, `active_to`
+- [x] `auto_unlock_on_proximity`, `is_required`, `is_enabled`
+
+### POI média
+- [x] tabulka / práce s `poi_media`
+- [x] admin formulář pro média u POI
+- [x] obrázky v detailu POI na hráčské straně
+- [x] YouTube / video URL v detailu POI
+- [x] browser TTS přes `speechSynthesis`
+
+### Treasures
+- [x] seznam pokladů pro hru
+- [x] vytvoření pokladu
+- [x] editace pokladu
+- [x] smazání pokladu
+- [x] `treasure_type` (`public`, `hidden`, `individual`, `team`)
+- [x] `is_visible_on_map`, `max_claims`, `points`, `is_enabled`
+- [x] vazba treasure -> POI přes `poi_id` existuje v DB a formuláři
+- [x] claim logika v backendu
 - [x] zápis do `treasure_claims`
-- [x] zobrazení POI v hráčské mapě
-- [x] zobrazení pokladů v hráčské mapě
-- [x] detail POI / pokladu nad mapou
-- [x] TTS přes browser (`speechSynthesis`)
-- [x] media pro POI (`poi_media`)
-- [x] zobrazení obrázků a YouTube v detailu POI
-- [x] admin formuláře POI rozšířené o média
-- [x] landing / rozcestník `/`
-- [x] VentureOut vizuální směr
-- [x] background image pro landing / admin
-- [x] admin `header.php`
-- [x] admin `footer.php`
-- [x] `admin/games/index.php` převedený na shared header/footer
-- [x] poslední známá poloha hráče
-- [x] čas posledního updatu
-- [x] přesnost GPS
-- [x] detail hráče s historií pohybu
-- [x] detail hráče s historií průchodů (základ)
-- [x] výsledovka v detailu hry (základ)
-- [x] evidence průchodu POI přes `events` (technický základ)
+- [x] event `treasure_claimed`
+
+### Hráčský vstup do hry
+- [x] veřejná URL hry `/game/{slug}`
+- [x] registrace hráče přezdívkou
+- [x] kontrola unikátní přezdívky v rámci hry
+- [x] obsluha invite kódu při registraci
+- [x] vytvoření player session
+- [x] návrat do hry přes cookie `player_session`
+- [x] dashboard hráče
+
+### Hráčská mapa a herní loop
+- [x] Leaflet mapa pro hráče
+- [x] GPS watchPosition
+- [x] endpoint `POST /api/player/location`
+- [x] endpoint `GET /api/player/map-data`
+- [x] endpoint `POST /api/player/explore`
+- [x] endpoint `POST /api/player/poi/complete`
+- [x] endpoint `POST /api/player/claim`
+- [x] endpoint `POST /api/player/help`
+- [x] zobrazení POI v mapě hráče
+- [x] zobrazení treasure v mapě hráče
+- [x] panel `Prozkoumat okolí`
+- [x] průzkum vrací 0 / 1 / více objektů v dosahu
+- [x] modal pro výběr z více objektů v okolí
+- [x] detail POI a detail treasure v modalu
+- [x] potvrzení dokončení POI až vědomou akcí hráče
+- [x] claim treasure až vědomou akcí hráče
+
+### Výsledky a přehled hráče
+- [x] výpočet bodů z treasure claimů
+- [x] základní leaderboard pro hráče
+- [x] player card modal
+- [x] výsledovka v hráčském UI
+- [x] progress procenta z POI + treasures
+
+### Tracking a admin dohled
+- [x] logování polohy do `location_log`
+- [x] detail hráče v adminu
+- [x] poslední známá poloha v detailu hráče
+- [x] historie poloh v detailu hráče
+- [x] poslední události hráče v detailu hráče
+- [x] sebrané poklady v detailu hráče
+- [x] výsledovka na detailu hry
+
+### Help / SOS
+- [x] hráč může poslat SOS / help request
+- [x] ukládání do `help_requests`
+- [x] admin header alerts pro SOS a důležité eventy
+- [x] acknowledge / resolve endpointy pro help request
+- [x] aktivní SOS je vidět v detailu hráče
 
 ---
 
-# Kritická pravda o stavu projektu
+## Hotové jen částečně nebo technicky, ale ne dotažené
 
-## Není hotové produktově, i když je to částečně v kódu
-- [ ] player card je dotažený herní modul
-- [ ] výsledovka hráče je dotažený UX modul
-- [ ] SOS je dotažený provozní systém pro organizátora
-- [ ] POI návštěva znamená skutečnou interakci hráče, ne jen vstup do radiusu
-- [ ] poklad má skutečný pocit hledání a odměny
-- [ ] onboarding vysvětluje hráči cíl a pravidla konkrétní hry
-- [ ] admin detail hry funguje jako živý operační cockpit
-
----
-
-# Hlavní produktový princip odteď
-
-## Nové pravidlo hry
-- [x] technická blízkost != herní objev
-- [x] hráč musí mít možnost vědomé akce `Prozkoumat okolí`
-- [x] POI / treasure se nemají počítat jako navštívené jen za průjezd kolem
-- [x] teprve průzkum / interakce má vést k odhalení obsahu
-- [x] teprve dokončení interakce má vést k zápisu postupu a bodů
-
-## Herní stavový model
-- [ ] `nearby` — místo je dost blízko na průzkum
-- [ ] `explored` — hráč klikl `Prozkoumat okolí`
-- [ ] `opened` / `engaged` — hráč otevřel obsah nebo začal interakci
-- [ ] `completed` / `claimed` — hráč dokončil POI nebo získal poklad
+- [~] herní smyčka `explore -> open -> complete/claim` existuje, ale bez jemnějších stavů typu `nearby / discovered / opened / completed`
+- [~] POI už nejsou čistě auto-open flow, ale event model stále používá jen `poi_visited`
+- [~] player card existuje, ale je spíš modal s pár statistikami než plnohodnotný herní hub
+- [~] výsledovka existuje pro player i admin, ale pořadí se opírá hlavně o poklady a body
+- [~] SOS funguje, ale není z něj samostatný provozní modul / dashboard jedné hry
+- [~] treasure typy existují, ale herní význam `public/hidden/individual/team` zatím není dotažený do širší logiky hry
+- [~] vazba `treasure.poi_id` existuje, ale dokončení POI zatím nic skutečně neodemyká (`unlocked_treasures` se vrací prázdné pole)
+- [~] `session_cookie_days` je v administraci, ale hráčská registrace zatím vždy nastavuje cookie natvrdo na 365 dní
 
 ---
 
-# PRIORITA 1 — HERNÍ SMYČKA NA MAPĚ
+## Důležité mezery a dluhy
 
-## Cíl
-👉 přestat mít jen mapu s body a udělat z toho jasnou hru:
+### Herní logika
+- [ ] doplnit skutečný unlock flow `POI -> treasure`
+- [ ] rozlišit eventy minimálně na `poi_discovered`, `poi_opened`, `poi_completed`, `treasure_discovered`, `treasure_claimed`
+- [ ] rozhodnout, co se počítá do výsledků a co je jen analytika
+- [ ] přestat mít `poi_visited` jako jediný stav POI
+- [ ] doplnit prioritu objektů při více kandidátech v dosahu
+- [ ] lépe využít `auto_unlock_on_proximity` nebo ho odstranit, pokud už nemá význam
+- [ ] skrývání treasure do doby triggeru není dotažené; aktuálně se na mapě řídí hlavně `is_visible_on_map`
 
-1. hráč se pohybuje
-2. hra oznámí, že je něco poblíž
-3. hráč zvolí `Prozkoumat okolí`
-4. hra odhalí relevantní POI / stopu / treasure
-5. hráč obsah přečte, poslechne nebo splní interakci
-6. teprve potom se zapíše průchod a odměna
+### Admin provoz a operativa
+- [ ] samostatná stránka / obrazovka pro otevřené SOS
+- [ ] dashboard jedné hry s živou mapou hráčů
+- [ ] rychlý přehled aktivních / neaktivních hráčů podle posledního kontaktu
+- [ ] přehled posledních objevů / posledních claimů po jednotlivých hrách
+- [ ] lepší operační cockpit než současný globální dashboard se třemi počty
 
-## Udělat hned
-- [ ] zrušit automatický význam `poi_visited` jen za vstup do radiusu
-- [ ] přestat auto-otevírat POI bez akce hráče
-- [ ] zavést stav „Místo je dost blízko na průzkum“
-- [ ] přidat univerzální akci `Prozkoumat okolí`
-- [ ] po průzkumu vracet hráči to, co je herně relevantní v okolí
-- [ ] rozlišit technický proximity stav od skutečné návštěvy / objevu
-- [ ] u průzkumu rozhodovat, zda:
-  - [ ] otevřít rovnou jeden objekt
-  - [ ] nebo nabídnout výběr více objektů v dosahu
-- [ ] při více objektech vracet hráči lidský výběr, ne technický seznam záznamů
+### Tracking
+- [ ] `POST /api/player/location` momentálně loguje polohu jen do `location_log`
+- [ ] vrátit nebo nahradit update `players.last_lat`, `players.last_lon`, `players.last_accuracy`, `players.last_seen_at`
+- [ ] bez toho je část admin přehledů a leaderboardu založená na zastarávajících údajích v tabulce `players`
+- [ ] vykreslení trasy hráče na mapě v adminu
+- [ ] omezit nebo archivovat růst `location_log`
 
-## Když je v dosahu více objektů
-- [ ] pokud je 1 relevantní objekt → otevřít rovnou
-- [ ] pokud je více relevantních objektů → nabídnout výběr
-- [ ] později zavést prioritu podle:
-  - [ ] vzdálenosti
-  - [ ] typu objektu
-  - [ ] ruční priority z adminu
-  - [ ] stavu hry / fáze hry
-  - [ ] toho, zda už byl objekt objeven
+### Hráčský UX
+- [ ] onboarding / briefing konkrétní hry před mapou
+- [ ] lépe vysvětlit rozdíl mezi POI a treasure
+- [ ] herní texty v mapovém UI místo utilitních hlášek
+- [ ] lepší práce s GPS nejistotou a chybami geolokace
+- [ ] méně alertů, více řízený mobile-first UX flow
+- [ ] průběžná aktualizace player stats z backendu místo lokálního dopočtu jen v JS
 
----
+### Obsah a média
+- [ ] dotáhnout uploady do konzistentní struktury a validace
+- [ ] ověřit a uklidit ukládání souborů do `public/uploads`
+- [ ] stejné media flow doplnit i pro treasures
+- [ ] audio soubory pro POI / treasure nejsou jako plnohodnotný upload modul dotažené
 
-# PRIORITA 2 — POI A TREASURE JAKO DVA ODLIŠNÉ ZÁŽITKY
+### Bezpečnost a pravidla přístupu
+- [ ] zpevnit cookie pro hráče (`httponly`, `secure`, `samesite`)
+- [ ] respektovat časové okno hry i při obnově session
+- [ ] důsledně vynucovat `starts_at` / `ends_at` při vstupu a hraní
+- [ ] doplnit kontrolu `valid_from` / `valid_to` u invites, pokud jsou v DB navržené
+- [ ] projít oprávnění editor/viewer rolí; teď je admin guard v zásadě jen `isset($_SESSION['admin_user'])`
 
-## Směr
-👉 POI nemá být totéž co poklad.
-
-- POI = informace / příběh / kontext / stopa / úkol
-- treasure = odměna / nález / něco skrytého / něco, co se odemyká
-
-## Udělat
-- [ ] přestat mít stejné chování POI a treasure
-- [ ] POI otevírat až po vědomém průzkumu
-- [ ] treasure neukazovat příliš automaticky
-- [ ] zavést stav `něco je poblíž`
-- [ ] zavést pocit hledání u treasure
-
-## Hlavní model treasure
-- [x] treasure nemá být hlavní plošně automatická věc na mapě
-- [x] splnění / dokončení POI může být trigger k odhalení treasure
-- [ ] doplnit vazbu `POI -> unlocks treasure`
-- [ ] po dokončení POI ukázat hráči, že odhalil další stopu nebo možnost nálezu
-- [ ] umožnit i vedlejší typ treasure mimo hlavní trigger flow
-
-## Doporučené typy treasure
-- [ ] `primary` — hlavní treasure odemykaný přes POI
-- [ ] `bonus` — volný bonusový treasure
-- [ ] `hidden` — treasure pouze přes indicii / stopu
-- [ ] `team` — treasure vázaný na tým nebo společnou akci
-
----
-
-# PRIORITA 3 — ENDPOINTY A EVENT MODEL PRO NOVOU HRU
-
-## Backend změny
-- [ ] navrhnout nový endpoint `POST /api/player/explore`
-- [ ] endpoint vezme aktuální polohu hráče
-- [ ] endpoint najde relevantní objekty v dosahu
-- [ ] endpoint rozhodne, zda vrátit jeden detail nebo seznam možností
-- [ ] endpoint zapíše správný event podle typu akce
-
-## Events
-- [ ] přestat spoléhat jen na `poi_visited`
-- [ ] zavést jemnější eventy, minimálně konceptuálně:
-  - [ ] `poi_nearby`
-  - [ ] `poi_discovered`
-  - [ ] `poi_opened`
-  - [ ] `poi_completed`
-  - [ ] `treasure_nearby`
-  - [ ] `treasure_discovered`
-  - [ ] `treasure_claimed`
-- [ ] rozhodnout, které eventy jsou jen interní analytika a které se počítají do výsledků
-
-## Datový model
-- [ ] doplnit DB / model tak, aby šlo rozlišit:
-  - [ ] blízkost
-  - [ ] objevení
-  - [ ] otevření
-  - [ ] dokončení
-- [ ] doplnit vazbu mezi POI a treasure
-- [ ] doplnit prioritu objektu
-- [ ] doplnit možnost skrýt treasure do doby triggeru
-
----
-
-# PRIORITA 4 — PLAYER UX / MAP SCREEN
-
-## Hlavní problémy dnes
-- [ ] levý horní box je technický, ne herní
-- [ ] `GPS OK (67m)` nedává hráči hlavní smysl
-- [ ] pravý horní panel nemá finální roli
-- [ ] spodní tlačítka zakrývají mapu
-- [ ] `Obnovit` nemá jasný význam
-- [ ] SOS nemá být na hlavní mapě jako hlavní akce
-- [ ] UI je stále víc utilita než hra
-
-## Udělat
-- [ ] udělat z mapy skutečný herní screen
-- [ ] hlavní message má být herní, ne technická
-- [ ] GPS stav přesunout do sekundární role
-- [ ] zobrazovat kontextový panel:
-  - [ ] něco je poblíž
-  - [ ] můžeš prozkoumat okolí
-  - [ ] odhalil jsi stopu
-  - [ ] můžeš pokračovat
-- [ ] přidat primární CTA podle situace:
-  - [ ] `Prozkoumat okolí`
-  - [ ] `Otevřít stopu`
-  - [ ] `Pokračovat v průzkumu`
-  - [ ] `Sebrat poklad`
-- [ ] přesunout SOS do player card
-- [ ] promyslet bottom sheet místo tvrdých modalů
-- [ ] zachovat jednoduchost ovládání na mobilu
-
-## Player card
-- [ ] stabilizovat player card jako jedno hlavní místo pro:
-  - [ ] profil hráče
-  - [ ] body / XP
-  - [ ] progress
-  - [ ] tým
-  - [ ] SOS
-  - [ ] stav hry
-
----
-
-# PRIORITA 5 — ONBOARDING / BRIEFING HRY
-
-## Kritický problém
-Hráč dnes nemá dost jasně vysvětlené:
-- [ ] co je cílem konkrétní hry
-- [ ] co jsou POI
-- [ ] co jsou poklady
-- [ ] co znamenají body a progress
-- [ ] jak funguje SOS
-- [ ] co má dělat, když něco nejde
-
-## Udělat
-- [ ] obecná stránka „Jak VentureOut funguje“
-- [ ] briefing konkrétní hry před vstupem do mapy
-- [ ] napojit briefing na `intro_text`
-- [ ] oddělit do budoucna:
-  - [ ] intro
-  - [ ] pravidla
-  - [ ] speciální mechaniky hry
-- [ ] vysvětlit hráči princip:
-  - [ ] jsi poblíž místa
-  - [ ] prozkoumej okolí
-  - [ ] objev obsah
-  - [ ] dokonči interakci
-  - [ ] získej odměnu / postup
-
----
-
-# PRIORITA 6 — DASHBOARD SPRÁVCE / OPERAČNÍ COCKPIT
-
-## Cíl
-Dashboard správce nemá být jen menu, ale živý přehled jedné hry.
-
-## Udělat
-- [ ] otevřená volání o pomoc
-- [ ] poslední aktivita hráčů
-- [ ] poslední známá poloha hráčů
-- [ ] přehled průchodů POI / treasure
-- [ ] kdo je aktivní / neaktivní
-- [ ] kdo naposledy něco objevil
-- [ ] mapa jedné hry s hráči
-- [ ] rychlý přístup k detailu hráče
-- [ ] dashboard jedné hry jako operační obrazovka
-
----
-
-# PRIORITA 7 — HELP / SOS JAKO OPRAVDOVÝ PROVOZNÍ MODUL
-
-## Stav dnes
-- [x] endpoint existuje
-- [x] hráč může poslat pomoc
-
-## Chybí
-- [ ] admin panel pro help requesty
-- [ ] seznam otevřených SOS
-- [ ] poslední známá poloha hráče u SOS
-- [ ] čas požadavku
-- [ ] text zprávy
-- [ ] stav řešení (`open`, `in_progress`, `closed`)
-- [ ] možnost označit vyřešeno
-- [ ] zobrazení SOS na dashboardu správce
-
----
-
-# PRIORITA 8 — VÝSLEDOVKY, BODY, XP, PROGRESS
-
-## Důležitá poznámka
-Nejdřív musí být jasná herní smyčka. Až potom má smysl body a levely rozšiřovat.
-
-## Hráč
-- [ ] player card / profil hráče
-- [ ] body
-- [ ] tým
-- [ ] doba ve hře
-- [ ] objevená POI
-- [ ] dokončená POI
-- [ ] sebrané poklady
-- [ ] progress
-- [ ] výsledovka hráče
-
-## Admin
-- [ ] výsledovka jedné hry
-- [ ] přehled pořadí hráčů
-- [ ] kdo našel co
-- [ ] kdo je aktivní
-- [ ] poslední poloha hráčů
-- [ ] historie průchodů
-
-## XP
-- [ ] XP za dokončení POI
-- [ ] XP za nalezení treasure
-- [ ] XP za dokončení hry
-- [ ] bonusové XP za speciální objev / událost
-
----
-
-# PRIORITA 9 — LEVELY / HODNOSTI / STYL HRY
-
-## Směr
-👉 hra nemá být jen jednorázová trasa, ale má dát hráči pocit růstu.
-
-## Levely
-- [ ] level z celkových XP
-- [ ] progress do dalšího levelu
-- [ ] rychlý začátek, později těžší růst
-- [ ] minimálně do levelu 15
-
-## Hodnosti
-- [ ] `level_scheme` v nastavení hry
-- [ ] admin vybírá styl při založení hry
-- [ ] varianty:
-  - [ ] `military`
-  - [ ] `adventure`
-  - [ ] `mystic`
-  - [ ] později případně kombinované schéma
-
-## Poznámka
-Hodnosti až po stabilizaci toho, za co hráč skutečně získává XP.
-
----
-
-# PRIORITA 10 — MEDIA / OBSAH
-
-## Hotovo
-- [x] POI media přes `poi_media`
-- [x] obrázky v detailu POI
-- [x] YouTube v detailu POI
-
-## Dále
-- [ ] upload obrázků v adminu dotáhnout plně
-- [ ] ukládání do `/public/uploads/games/{game_id}/pois/{poi_id}/`
-- [ ] validace uploadu
-- [ ] 0 až N příloh
-- [ ] kombinace externí URL + vlastní foto + YouTube
-- [ ] později stejný systém i pro treasure
-
----
-
-# PRIORITA 11 — TRACKING / TREKOVATELNOST
-
-## Máme základ
-- [x] `updateLocation()`
-- [x] logování polohy
-- [x] poslední známá poloha hráče
-- [x] čas posledního updatu
-- [x] přesnost GPS
-- [x] detail hráče s posledními body pohybu
-
-## Udělat
-- [ ] možnost ukázat trasu na mapě (v detailu)
-- [ ] omezení počtu bodů / rozumné okno historie
-- [ ] využít tracking pro operační dashboard
-- [ ] využít tracking pro SOS a dohled
-
----
-
-# PRIORITA 12 — STABILIZACE / ÚKLID
-
+### Kód a údržba
 - [ ] odstranit `.DS_Store`
-- [ ] opravit `.gitignore`
-- [ ] přesunout backupy mimo repo
-- [ ] cleanup hotfixů
-- [ ] odstranit warningy / notices
-- [ ] verzované SQL migrace
-- [ ] uklidit staré view, které už nemají žít vlastním layoutem
-- [ ] zpevnit session cookie (`httponly`, `secure`, `samesite`)
-- [ ] respektovat `session_cookie_days`
-- [ ] doplnit kontrolu `valid_from` / `valid_to` u invites
-- [ ] lépe vynucovat časové okno hry (`starts_at`, `ends_at`)
+- [ ] přesunout SQL backupy mimo repo
+- [ ] doplnit skutečné verzované migrace (adresář `database/migrations` je prázdný)
+- [ ] zkontrolovat a doplnit seedery
+- [ ] uklidit dead code a starší experimenty v TODO / dokumentaci
+- [ ] sjednotit README, `popis.txt` a reálný stav aplikace
+
+### Funkce, které v zadání jsou, ale v repu zatím nejsou
+- [ ] chat hráčů / týmů
+- [ ] admin správa týmů
+- [ ] checkpoint / rescue flow jako samostatná gameplay logika
+- [ ] import / export blueprintů hry
+- [ ] quick capture z terénu
+- [ ] XP / levely / hodnosti
+- [ ] plnohodnotný briefing, outro a širší narativní flow hry
 
 ---
 
-# Co dává největší smysl udělat ještě dnes
+## Doporučená nejbližší priorita
 
-## Varianta doporučená jako další implementační krok
-- [ ] přepsat flow hráčské mapy z auto-open na `Prozkoumat okolí`
-- [ ] navrhnout a zavést endpoint `POST /api/player/explore`
-- [ ] přestat zapisovat návštěvu POI jen za proximity
-- [ ] vracet 1 objekt nebo seznam objektů v dosahu
-- [ ] připravit trigger `POI -> treasure`
+### 1. Opravit provozní pravdu o poloze hráče
+- [ ] v `updateLocation()` znovu zapisovat i `players.last_*`
+- [ ] ověřit, že admin detail hry a detail hráče ukazují aktuální data
 
-## Co nebrat dnes jako první
-- [ ] neřešit dnes nejdřív hodnosti
-- [ ] neřešit dnes nejdřív další CRUD stránky
-- [ ] neřešit dnes nejdřív kosmetické drobnosti adminu
+### 2. Dotáhnout skutečný unlock flow
+- [ ] po `completePoi()` opravdu odemykat navázané treasure
+- [ ] vracet `unlocked_treasures` podle reality
+- [ ] zapisovat odpovídající eventy
 
-## Pracovní pravidlo
-👉 Nejprve zafixovat herní smyčku hráče. Teprve potom rozšiřovat výsledovky, levely a širší admin.
+### 3. Stabilizovat event model
+- [ ] rozdělit `poi_visited` na jemnější stavy
+- [ ] upravit leaderboard a progress, aby stál na finálních stavech
 
----
-
-# PRIORITA 6 — GAME BLUEPRINT JSON + IMPORT / SYNC
-
-## Směr
-👉 hra nemá vznikat jen ručně přes pomalý admin formulář.
-
-Potřebujeme tři způsoby tvorby obsahu:
-- [ ] `Game Blueprint JSON` — návrh hry od stolu / po brainstormingu / přes GPT
-- [ ] `Quick Capture` — rychlé zachycení místa v terénu
-- [ ] admin formulář — ruční detailní zásah a dolaďování
-
-## Game Blueprint JSON
-- [ ] navrhnout první verzi `game_blueprint.schema.json`
-- [ ] blueprint musí být kanonický návrh hry, ne jen export DB tabulek
-- [ ] blueprint musí pokrýt minimálně:
-  - [ ] metadata hry
-  - [ ] intro / briefing / outro texty
-  - [ ] POI
-  - [ ] treasures
-  - [ ] visibility pravidla
-  - [ ] trigger `POI -> unlocks treasure`
-  - [ ] scoring základy
-- [ ] každý importovatelný objekt musí mít stabilní klíč, ne jen název:
-  - [ ] `game_key`
-  - [ ] `poi_key`
-  - [ ] `treasure_key`
-  - [ ] později `task_key`
-
-## Import režimy
-- [ ] `create new` — vytvořit novou hru z blueprintu
-- [ ] `replace existing` — kompletně přepsat návrhovou strukturu existující hry
-- [ ] `merge / sync existing` — aktualizovat existující hru podle stabilních klíčů objektů
-- [ ] u `replace existing` vždy udělat preview a zálohu před importem
-- [ ] u `merge / sync` nemazat provozní data hráčů bez explicitního reset režimu
-
-## Validace a preview importu
-- [ ] validace struktury blueprintu před importem
-- [ ] validace logiky hry před importem
-- [ ] kontrola duplicitních klíčů objektů
-- [ ] kontrola referencí (`POI -> treasure`, `requires`, `unlocks`)
-- [ ] preview importu musí ukázat:
-  - [ ] kolik objektů vznikne
-  - [ ] kolik se aktualizuje
-  - [ ] kolik se smaže
-  - [ ] zda zůstávají zachována runtime data hráčů
-
-## Oddělení návrhových a provozních dat
-- [ ] jasně oddělit návrhovou vrstvu:
-  - [ ] hra
-  - [ ] POI
-  - [ ] treasures
-  - [ ] tasks
-  - [ ] texty
-  - [ ] scoring pravidla
-- [ ] od provozní vrstvy:
-  - [ ] players
-  - [ ] player_positions
-  - [ ] events
-  - [ ] treasure_claims
-  - [ ] help_requests
-  - [ ] leaderboard / progress
-- [ ] importer nesmí bezmyšlenkovitě rozbíjet aktivní nebo odehranou hru
-
-## První praktický cíl
-- [ ] navrhnout první verzi blueprint formátu
-- [ ] vytvořit jeden ukázkový blueprint
-- [ ] až potom napsat importér
-- [ ] první importér má umět bezpečně jen `create new`
-- [ ] `merge / sync` dodělat až po odzkoušení formátu
+### 4. Udělat z adminu použitelný operační nástroj
+- [ ] přidat přehled otevřených SOS po hrách
+- [ ] přidat aktivitu hráčů a poslední polohu do dashboardu jedné hry
 
 ---
 
-# PRIORITA 7 — QUICK CAPTURE / TERÉNNÍ ZÁCHYT
+## Co teď rozhodně netvrdit v dokumentaci jako hotové
 
-## Směr
-👉 admin formulář je pomalý pro situace typu: „vidím v terénu kapličku, tak ji tam dám“.
-
-Potřebujeme rychlou cestu pro spontánní záchyt místa.
-
-## Cíl
-- [ ] mít velmi rychlé přidání bodu z terénu
-- [ ] vzít aktuální GPS
-- [ ] volitelně přidat fotku
-- [ ] volitelně přidat krátkou poznámku
-- [ ] uložit jako `draft`, ne nutně hned jako finální POI
-
-## Datový model terénního záchytu
-- [ ] rozhodnout, zda použít:
-  - [ ] `pois.status = draft / active / hidden`
-  - [ ] nebo samostatnou tabulku `poi_drafts`
-- [ ] draft objekt musí umět minimálně:
-  - [ ] GPS
-  - [ ] pracovní název
-  - [ ] typ návrhu (`poi`, `treasure`, `draft`)
-  - [ ] fotku
-  - [ ] poznámku
-  - [ ] čas vytvoření
-  - [ ] autora
-
-## Workflow
-- [ ] rychlá akce `Přidat místo z aktuální GPS`
-- [ ] rychlá akce `Vyfotit a uložit jako draft`
-- [ ] pozdější převod draftu na:
-  - [ ] POI
-  - [ ] treasure
-  - [ ] součást blueprintu
-- [ ] možnost draft skrýt / archivovat / smazat
-
-## Produktový princip
-- [ ] admin formulář není hlavní kreativní nástroj
-- [ ] hlavní kreativní vstupy jsou:
-  - [ ] blueprint návrh hry
-  - [ ] quick capture v terénu
-- [ ] admin editace je hlavně pro dolaďování, opravy a přesné ruční zásahy
+- [ ] že treasure se odemyká po dokončení konkrétního POI
+- [ ] že `session_cookie_days` skutečně řídí hráčskou cookie
+- [ ] že admin dashboard je živý operační cockpit hry
+- [ ] že existuje chat
+- [ ] že jsou hotové migrace
+- [ ] že tracking automaticky drží aktuální poslední polohu v tabulce `players`
