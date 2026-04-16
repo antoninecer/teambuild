@@ -125,6 +125,11 @@ if ($method === 'GET' && preg_match('#^/admin/games/(\d+)$#', $uri, $matches)) {
     exit;
 }
 
+if ($method === 'GET' && preg_match('#^/admin/players/(\d+)$#', $uri, $matches)) {
+    (new GameController())->playerDetail((int) $matches[1]);
+    exit;
+}
+
 // ADMIN - POI
 if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/pois$#', $uri, $matches)) {
     (new PoiController())->index((int) $matches[1]);

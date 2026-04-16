@@ -1,45 +1,25 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <title>Poklady - <?= htmlspecialchars($game['name'], ENT_QUOTES, 'UTF-8') ?></title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; max-width: 1100px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; vertical-align: top; }
-        th { background: #f8f8f8; }
-        .actions { margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
-        .btn {
-            padding: 10px 14px;
-            cursor: pointer;
-            text-decoration: none;
-            border: 1px solid #999;
-            background: #fff;
-            color: #000;
-            display: inline-block;
-        }
-        .btn-primary { background: #000; color: #fff; border: 1px solid #000; }
-        .btn-danger { color: #b00020; border-color: #b00020; }
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            background: #eee;
-        }
-    </style>
-</head>
-<body>
-    <h1>Poklady: <?= htmlspecialchars($game['name'], ENT_QUOTES, 'UTF-8') ?></h1>
+<?php
+/** @var array $game */
+/** @var array $treasures */
 
-    <div class="actions">
-        <a class="btn" href="/admin/games/<?= (int) $game['id'] ?>">Zpět na detail hry</a>
-        <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/treasures/create">Vytvořit poklad</a>
+$pageTitle = 'Poklady';
+$pageSubtitle = 'Hra: ' . $game['name'];
+$activeNav = 'games';
+
+require __DIR__ . '/../partials/header.php';
+?>
+
+<div class="page-actions">
+    <a class="btn btn-secondary" href="/admin/games/<?= (int) $game['id'] ?>">Zpět na detail hry</a>
+    <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/treasures/create">Vytvořit poklad</a>
+</div>
+
+<?php if (empty($treasures)): ?>
+    <div class="card" style="margin-top: 20px;">
+        <p style="margin:0; color: var(--ink-soft);">Pro tuto hru zatím nejsou definované žádné poklady.</p>
     </div>
-
-    <?php if (empty($treasures)): ?>
-        <p>Pro tuto hru zatím nejsou definované žádné poklady.</p>
-    <?php else: ?>
+<?php else: ?>
+    <div class="table-wrap" style="margin-top: 20px;">
         <table>
             <thead>
                 <tr>
@@ -62,7 +42,7 @@
                         <td>
                             <strong><?= htmlspecialchars($treasure['name'], ENT_QUOTES, 'UTF-8') ?></strong>
                             <?php if (!empty($treasure['description'])): ?>
-                                <div style="margin-top:6px; color:#555;">
+                                <div style="margin-top:4px; font-size: 13px; color: var(--ink-soft);">
                                     <?= nl2br(htmlspecialchars((string) $treasure['description'], ENT_QUOTES, 'UTF-8')) ?>
                                 </div>
                             <?php endif; ?>
@@ -70,23 +50,36 @@
                         <td><span class="badge"><?= htmlspecialchars($treasure['treasure_type'], ENT_QUOTES, 'UTF-8') ?></span></td>
                         <td><?= htmlspecialchars((string) ($treasure['poi_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
                         <td>
-                            <?= htmlspecialchars((string) $treasure['lat'], ENT_QUOTES, 'UTF-8') ?>,
-                            <?= htmlspecialchars((string) $treasure['lon'], ENT_QUOTES, 'UTF-8') ?>
+                            <span style="font-size: 12px; font-family: monospace;">
+                                <?= htmlspecialchars((string) $treasure['lat'], ENT_QUOTES, 'UTF-8') ?>,<br>
+                                <?= htmlspecialchars((string) $treasure['lon'], ENT_QUOTES, 'UTF-8') ?>
+                            </span>
                         </td>
                         <td><?= (int) $treasure['radius_m'] ?> m</td>
                         <td><?= (int) $treasure['points'] ?></td>
-                        <td><?= (int) $treasure['is_visible_on_map'] === 1 ? 'ano' : 'ne' ?></td>
-                        <td><?= (int) $treasure['is_enabled'] === 1 ? 'ano' : 'ne' ?></td>
                         <td>
-                            <a href="/admin/treasures/<?= (int) $treasure['id'] ?>/edit">Upravit</a>
-                            <form action="/admin/treasures/<?= (int) $treasure['id'] ?>/delete" method="POST" style="display:inline; margin-left:8px;">
-                                <button type="submit" class="btn btn-danger" onclick="return confirm('Opravdu smazat tento poklad?')">Smazat</button>
-                            </form>
+                            <span class="badge <?= (int) $treasure['is_visible_on_map'] === 1 ? 'badge-self' : '' ?>">
+                                <?= (int) $treasure['is_visible_on_map'] === 1 ? 'ano' : 'ne' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge <?= (int) $treasure['is_enabled'] === 1 ? 'badge-self' : '' ?>">
+                                <?= (int) $treasure['is_enabled'] === 1 ? 'ano' : 'ne' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <a class="btn btn-secondary" style="padding: 5px 10px; font-size: 13px;" href="/admin/treasures/<?= (int) $treasure['id'] ?>/edit">Upravit</a>
+                                <form action="/admin/treasures/<?= (int) $treasure['id'] ?>/delete" method="POST" onsubmit="return confirm('Opravdu smazat tento poklad?')">
+                                    <button type="submit" class="btn btn-secondary" style="padding: 5px 10px; font-size: 13px; color: #7a1b1b;">Smazat</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
-    <?php endif; ?>
-</body>
-</html>
+    </div>
+<?php endif; ?>
+
+<?php require __DIR__ . '/../partials/footer.php'; ?>

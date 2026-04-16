@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Repositories\GameRepository;
+use App\Repositories\PlayerRepository;
+use App\Support\Database;
+use PDO;
 
 final class GameController
 {
@@ -160,5 +163,48 @@ final class GameController
         }
 
         require __DIR__ . '/../../../resources/views/admin/games/show.php';
+    }
+
+    public function playerDetail(int $playerId): void
+    {
+        $this->requireAdmin();
+
+        $playerRepo = new PlayerRepository();
+        $player = $playerRepo->findById($playerId);
+
+        if (!$player) {
+            http_response_code(404);
+            echo 'Hráč nebyl nalezen.';
+            exit;
+        }
+
+        $gameRepo = new GameRepository();
+        $game = $gameRepo->findById((int) $player['game_id']);
+
+        $pdo = Database::connection();
+
+        // Treasures found
+        $treasuresStmt = $pdo->prepare(
+            'SELECT tc.*, t.name, t.points
+             FROM treasure_claims tc
+             JOIN treasures t ON tc.treasure_id = t.id
+             WHERE tc.player_id = :player_id
+             ORDER BY tc.claimed_at DESC'
+        );
+        $treasuresStmt->execute(['player_id' => $playerId]);
+        $claimedTreasures = $treasuresStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Location history
+        $locationStmt = $pdo->prepare(
+            'SELECT *
+             FROM location_log
+             WHERE player_id = :player_id
+             ORDER BY created_at DESC
+             LIMIT 100'
+        );
+        $locationStmt->execute(['player_id' => $playerId]);
+        $locationHistory = $locationStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        require __DIR__ . '/../../../resources/views/admin/players/show.php';
     }
 }

@@ -66,53 +66,30 @@ Teď je admin mix:
 - dashboard nesmí být druhé menu pod hlavním menu
 
 ## Udělat
-- [ ] napojit na shared `header.php` + `footer.php`:
-  - [ ] `resources/views/admin/games/create.php`
-  - [ ] `resources/views/admin/games/show.php`
-  - [ ] `resources/views/admin/users/index.php`
-  - [ ] později i `pois`, `treasures`, `invites`
-- [ ] odstranit duplicitní navigaci z admin dashboardu
-- [ ] z `admin/index.php` udělat skutečný dashboard, ne druhé rozcestníkové menu
-- [ ] sjednotit buttony, formuláře, tabulky a spacing
-- [ ] sjednotit breadcrumb / lokální page actions
+- [x] napojit na shared `header.php` + `footer.php`:
+  - [x] `resources/views/admin/games/create.php`
+  - [x] `resources/views/admin/games/show.php`
+  - [x] `resources/views/admin/users/index.php`
+  - [x] později i `pois`, `treasures`, `invites`
+- [x] odstranit duplicitní navigaci z admin dashboardu
+- [x] z `admin/index.php` udělat skutečný dashboard, ne druhé rozcestníkové menu
+- [x] sjednotit buttony, formuláře, tabulky a spacing
+- [x] sjednotit breadcrumb / lokální page actions
 
 ---
 
 # PRIORITA 2 — DASHBOARD SPRÁVCE
 
 ## Klíčová myšlenka
-Dashboard správce nemá být jen:
-- Hry
-- Uživatelé
-- menu
+Dashboard správce nemá být jen menu, ale **operační přehled**.
 
-Dashboard správce má být **operační přehled**.
-
-## Musí obsahovat
-- [ ] výsledovku
+## Udělat
+- [x] výsledovka v detailu hry
 - [ ] otevřená volání o pomoc
-- [ ] poslední známou polohu hráčů
-- [ ] poslední aktivitu hráčů
-- [ ] trekovatelnost / seznam průchodů
-- [ ] přehled kdo stojí, kdo se hýbe, kdo dlouho neupdatuje polohu
-
-## Role
-### Supersprávce
-- [ ] přehled nad všemi hrami
-- [ ] globální help requesty
-- [ ] globální výsledovky
-- [ ] globální poslední polohy / aktivita
-
-### Správce jedné hry
-- [ ] jen jeho hra
-- [ ] její hráči
-- [ ] její help requesty
-- [ ] její výsledovka
-- [ ] její trekování
-
-## Udělat nejdřív
-- [ ] dashboard jedné hry
-- [ ] až potom globální supersprávcovský dashboard
+- [x] poslední známá poloha hráčů (v tabulce)
+- [ ] poslední aktivita hráčů
+- [x] detail hráče s historií průchodů
+- [ ] dashboard jedné hry (vylepšený o mapu)
 
 ---
 
@@ -122,13 +99,12 @@ Dashboard správce má být **operační přehled**.
 - [x] `updateLocation()`
 - [x] logování polohy
 
-## Chybí vytáhnout na povrch
-- [ ] poslední známá poloha hráče
-- [ ] čas posledního updatu
-- [ ] přesnost GPS
-- [ ] seznam průchodů / historie poloh
-- [ ] detail hráče s posledními body pohybu
-- [ ] možnost ukázat trasu na mapě
+## Udělat
+- [x] poslední známá poloha hráče
+- [x] čas posledního updatu
+- [x] přesnost GPS
+- [x] detail hráče s posledními body pohybu
+- [ ] možnost ukázat trasu na mapě (v detailu)
 - [ ] omezení počtu bodů / rozumné okno historie
 
 ## Budoucí využití
