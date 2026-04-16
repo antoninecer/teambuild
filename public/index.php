@@ -89,6 +89,11 @@ if ($uri === '/admin/users/create' && $method === 'POST') {
     exit;
 }
 
+if ($method === 'GET' && $uri === '/admin/api/header-status') {
+    (new \App\Controllers\Admin\DashboardController())->headerStatus();
+    exit;
+}
+
 if ($method === 'POST' && preg_match('#^/admin/users/(\d+)/toggle$#', $uri, $matches)) {
     (new UserController())->toggle((int) $matches[1]);
     exit;
