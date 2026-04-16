@@ -2,13 +2,14 @@
 
 ## Hotovo
 - [x] databáze + základní tabulky
-- [x] admin uživatel
-- [x] testovací hra
+- [x] admin uživatelé
+- [x] testovací hry
 - [x] týmy
 - [x] POI (body)
 - [x] struktura projektu
 - [x] DB připojení (PHP)
-- [x] admin login + dashboard
+- [x] admin login
+- [x] admin dashboard základ
 - [x] seznam her + detail
 - [x] vytvoření hry
 - [x] editor POI (včetně mapy)
@@ -22,7 +23,7 @@
 - [x] správa uživatelů (základ)
 - [x] deploy + HTTPS
 - [x] invite flow
-- [x] režim hry (self_service / moderated)
+- [x] režim hry (`self_service` / `moderated`)
 - [x] poklady (DB + admin create/edit + mapa)
 - [x] endpoint `/api/player/map-data`
 - [x] endpoint `/api/player/claim`
@@ -35,236 +36,290 @@
 - [x] media pro POI (`poi_media`)
 - [x] zobrazení obrázků a YouTube v detailu POI
 - [x] admin formuláře POI rozšířené o média
+- [x] landing / rozcestník `/`
+- [x] VentureOut vizuální směr
+- [x] background image pro landing / admin
+- [x] admin `header.php`
+- [x] admin `footer.php`
+- [x] `admin/games/index.php` převedený na shared header/footer
 
 ---
 
-# AKTUÁLNÍ PRIORITA
+# AKTUÁLNÍ SMĚR
 
 ## Cíl
-👉 přestat vrstvit jen funkce a udělat z toho **čitelnou, hratelnou a hezky působící aplikaci**
+👉 přestat vrstvit jen CRUD a udělat z toho:
 
-Tj. teď je priorita:
-1. UX / layout hráče
-2. výsledovka hráče
-3. výsledovka admina
-4. XP / level / leaderboard
-5. až potom další rozšiřování mechanik
+- použitelnou hru pro hráče
+- přehledné operační rozhraní pro správce
+- vizuálně jednotný VentureOut systém
 
 ---
 
-# PRIORITA 1 — PLAYER UX / MAP SCREEN
-
-## Hlavní problémy, které jsou teď vidět
-- [ ] levý horní box je technický, ne herní (`GPS OK (67m)` nedává hráči smysl)
-- [ ] pravý horní timer vizuálně poskakuje a ruší
-- [ ] spodní tlačítka zbytečně zakrývají mapu
-- [ ] `Obnovit` nemá pro hráče jasný význam
-- [ ] SOS nemá být na hlavní mapové obrazovce
-- [ ] poklad se teď chová příliš automaticky, místo hledání spíš „vyskočí“
-- [ ] UI je spíš utilitní než herní
-
-## Udělat
-- [ ] předělat horní levý panel na **player card trigger**
-- [ ] místo textu `GPS OK (xxm)` udělat jen jednoduchý stav přesnosti / ikonu
-- [ ] klik na player card otevře panel s přehledem hráče
-- [ ] horní pravý panel stabilizovat (žádné skákání šířky podle času)
-- [ ] promyslet, zda má vpravo být čas nebo funkční akce (`nejbližší úkol`, `mapa / seznam`, apod.)
-- [ ] odstranit nebo nahradit tlačítko `Obnovit`
-- [ ] přesunout SOS do hráčské karty / menu
-- [ ] udělat spodní UI menší, lehčí a méně invazivní
-- [ ] přejít na průhledné / glass panely nad mapou
-- [ ] místo tvrdých modálů zvážit bottom sheet / vysouvací panel odspodu
-
-## Poklady vs. POI chování
-- [ ] POI se může otevřít automaticky po vstupu do radiusu
-- [ ] poklad se **nemá** otevírat automaticky jen proto, že je hráč poblíž
-- [ ] u pokladu má být pocit hledání a aktivní akce hráče
-- [ ] navrhnout stav typu `něco je poblíž` + akce `prozkoumat`
-
----
-
-# PRIORITA 2 — VÝSLEDOVKA / PLAYER CARD
-
-## Chybí
-- [ ] hráčská výsledovka není hotová
-- [ ] není přehled, co hráč získal a jak si vede
-- [ ] není „pocit identity“ hráče
-
-## Udělat
-- [ ] player card / profil hráče
-- [ ] zobrazit nickname
-- [ ] zobrazit tým
-- [ ] zobrazit dobu ve hře / čas od přihlášení
-- [ ] zobrazit navštívená POI
-- [ ] zobrazit počet sebraných pokladů
-- [ ] zobrazit seznam nalezených pokladů
-- [ ] zobrazit progress ve hře
-- [ ] připravit místo pro level / XP / žebříček
-- [ ] přesunout SOS sem
-
-## Později
-- [ ] achievementy / milníky
-- [ ] úrovně / odznaky
-- [ ] historie objevů
-
----
-
-# PRIORITA 3 — ADMIN UX / VÝSLEDOVKA HRY
+# PRIORITA 1 — SJEDNOCENÍ ADMINU
 
 ## Problém
-- [ ] admin backend je funkční, ale vizuálně působí jako utilita
-- [ ] výsledovka hry není hotová nebo není dobře vidět
+Teď je admin mix:
+- část už je VentureOut
+- část je starý syrový CRUD
+- některé stránky mají vlastní hlavičky, styly a layout
+- dashboard nesmí být druhé menu pod hlavním menu
 
 ## Udělat
-- [ ] admin přehled hráčů ve hře
-- [ ] tabulka / dashboard XP a pořadí
-- [ ] přehled pokladů: kdo našel co
-- [ ] poslední aktivita hráčů
-- [ ] poslední poloha hráče
-- [ ] SOS requesty na jednom místě
-- [ ] detail hráče
-- [ ] detail hry s přehledným dashboard layoutem
+- [ ] napojit na shared `header.php` + `footer.php`:
+  - [ ] `resources/views/admin/games/create.php`
+  - [ ] `resources/views/admin/games/show.php`
+  - [ ] `resources/views/admin/users/index.php`
+  - [ ] později i `pois`, `treasures`, `invites`
+- [ ] odstranit duplicitní navigaci z admin dashboardu
+- [ ] z `admin/index.php` udělat skutečný dashboard, ne druhé rozcestníkové menu
+- [ ] sjednotit buttony, formuláře, tabulky a spacing
+- [ ] sjednotit breadcrumb / lokální page actions
 
 ---
 
-# PRIORITA 4 — XP / LEVEL / LEADERBOARD
+# PRIORITA 2 — DASHBOARD SPRÁVCE
+
+## Klíčová myšlenka
+Dashboard správce nemá být jen:
+- Hry
+- Uživatelé
+- menu
+
+Dashboard správce má být **operační přehled**.
+
+## Musí obsahovat
+- [ ] výsledovku
+- [ ] otevřená volání o pomoc
+- [ ] poslední známou polohu hráčů
+- [ ] poslední aktivitu hráčů
+- [ ] trekovatelnost / seznam průchodů
+- [ ] přehled kdo stojí, kdo se hýbe, kdo dlouho neupdatuje polohu
+
+## Role
+### Supersprávce
+- [ ] přehled nad všemi hrami
+- [ ] globální help requesty
+- [ ] globální výsledovky
+- [ ] globální poslední polohy / aktivita
+
+### Správce jedné hry
+- [ ] jen jeho hra
+- [ ] její hráči
+- [ ] její help requesty
+- [ ] její výsledovka
+- [ ] její trekování
+
+## Udělat nejdřív
+- [ ] dashboard jedné hry
+- [ ] až potom globální supersprávcovský dashboard
+
+---
+
+# PRIORITA 3 — TRACKING / TREKOVATELNOST
+
+## Máme základ
+- [x] `updateLocation()`
+- [x] logování polohy
+
+## Chybí vytáhnout na povrch
+- [ ] poslední známá poloha hráče
+- [ ] čas posledního updatu
+- [ ] přesnost GPS
+- [ ] seznam průchodů / historie poloh
+- [ ] detail hráče s posledními body pohybu
+- [ ] možnost ukázat trasu na mapě
+- [ ] omezení počtu bodů / rozumné okno historie
+
+## Budoucí využití
+- [ ] kontrola průchodu hrou
+- [ ] dohled správce
+- [ ] reakce na SOS
+- [ ] kontrola neaktivity nebo podezřelého chování
+
+---
+
+# PRIORITA 4 — HELP / SOS
+
+## Stav
+- [x] endpoint existuje
+- [x] hráč může poslat pomoc
+
+## Chybí
+- [ ] admin panel pro help requesty
+- [ ] seznam otevřených SOS
+- [ ] poslední známá poloha hráče u SOS
+- [ ] čas požadavku
+- [ ] text zprávy
+- [ ] stav řešení (`open`, `in_progress`, `closed`)
+- [ ] možnost označit vyřešeno
+- [ ] zobrazení SOS na dashboardu správce
+
+---
+
+# PRIORITA 5 — VÝSLEDOVKY
+
+## Hráč
+- [ ] player card / profil hráče
+- [ ] body
+- [ ] tým
+- [ ] doba ve hře
+- [ ] navštívená POI
+- [ ] sebrané poklady
+- [ ] progress
+- [ ] výsledovka hráče
+- [ ] přesunout SOS sem
+
+## Admin
+- [ ] výsledovka jedné hry
+- [ ] přehled pořadí hráčů
+- [ ] kdo našel co
+- [ ] kdo je aktivní
+- [ ] poslední poloha hráčů
+- [ ] historie průchodů
+
+## Globálně
+- [ ] supersprávce výsledovka přes všechny hry
+
+---
+
+# PRIORITA 6 — PLAYER UX / MAP SCREEN
+
+## Hlavní problémy
+- [ ] levý horní box je technický, ne herní
+- [ ] `GPS OK (67m)` nedává hráči smysl
+- [ ] pravý horní panel nemá ještě finální význam
+- [ ] spodní tlačítka zakrývají mapu
+- [ ] `Obnovit` nemá jasný význam
+- [ ] SOS nemá být na hlavní mapě
+- [ ] poklad se chová příliš automaticky
+- [ ] UI je stále víc utilita než hra
+
+## Udělat
+- [ ] player card trigger
+- [ ] jednoduchý GPS stav místo technického textu
+- [ ] přesunout SOS do player card
+- [ ] stabilizovat horní pravý panel
+- [ ] rozhodnout, zda tam bude:
+  - [ ] konec hry
+  - [ ] kontextový slot
+  - [ ] aktuální úkol / fáze / časovka
+- [ ] zmenšit invazivnost UI
+- [ ] finalizovat průhledné glass panely
+- [ ] promyslet bottom sheet místo tvrdých modalů
+
+## POI vs. poklad
+- [ ] POI může auto-open
+- [ ] poklad se nemá auto-open
+- [ ] u pokladu musí být pocit hledání
+- [ ] stav `něco je poblíž`
+- [ ] akce `prozkoumat`
+
+---
+
+# PRIORITA 7 — ONBOARDING / NÁVODY
+
+## Chybí
+- [ ] obecný návod, co je VentureOut a jak se to hraje
+- [ ] návod / briefing pro konkrétní hru
+- [ ] hráč musí pochopit:
+  - [ ] co jsou POI
+  - [ ] co jsou poklady
+  - [ ] co je cílem hry
+  - [ ] co znamená progress / body / výhra
+  - [ ] jak funguje SOS
+  - [ ] co dělat při problému
+
+## Udělat
+- [ ] obecná stránka „Jak to funguje“
+- [ ] briefing konkrétní hry před vstupem do mapy
+- [ ] napojit briefing na `intro_text`
+- [ ] časem rozlišit:
+  - [ ] intro
+  - [ ] pravidla
+  - [ ] speciální mechaniky hry
+
+---
+
+# PRIORITA 8 — XP / LEVEL / LEADERBOARD
 
 ## Směr
-👉 hra nemá být jen jednorázová trasa, ale má dát hráči pocit růstu, postupu a srovnání s ostatními
+👉 hra nemá být jen jednorázová trasa, ale má dát hráči pocit růstu
 
-## XP systém
-- [ ] přidat XP hráči
+## XP
 - [ ] XP za návštěvu POI
 - [ ] XP za nalezení pokladu
 - [ ] XP za dokončení hry
-- [ ] možnost bonusových XP za objev / speciální událost
+- [ ] bonusové XP za objev / speciální událost
 
-## Level systém
-- [ ] levely ne lineárně, ale exponenciálně / geometricky
-- [ ] rychlý začátek (hráč musí brzy postoupit)
-- [ ] vyšší levely musí být těžší a mít váhu
-- [ ] připravit stupnici minimálně do levelu 15
-- [ ] level počítat z celkových XP
-- [ ] zobrazit level + název hodnosti
-- [ ] zobrazit progress do dalšího levelu
+## Levely
+- [ ] ne lineárně, ale exponenciálně / geometricky
+- [ ] rychlý začátek
+- [ ] vyšší levely těžší
+- [ ] minimálně do levelu 15
+- [ ] level z celkových XP
+- [ ] progress do dalšího levelu
 
 ## Žebříček
 - [ ] leaderboard podle XP
 - [ ] pořadí hráče ve hře
-- [ ] pořadí týmů (později)
-- [ ] „objev“ má umět hráče výrazně posunout v žebříčku
+- [ ] později pořadí týmů
 
-## Alternativní stupnice hodností
-Při zakládání hry musí jít vybrat styl levelů / hodností.
-
-### Udělat
-- [ ] přidat do hry volbu `level_scheme`
-- [ ] admin si při založení hry vybere styl stupnice
-- [ ] mapovat level → název podle zvolené stupnice
-
-### První varianty
-- [ ] `military` — lehký vojenský feeling
-- [ ] `adventure` — průzkumník / dobrodruh / lovec pokladů
-- [ ] `mystic` — tajemný řád / zasvěcení / strážci
-
-### Poznámka
-Nejde o historickou přesnost, ale o historicky uvěřitelný a herně silný pocit.
+## Stupnice hodností
+- [ ] `level_scheme` v nastavení hry
+- [ ] admin vybírá styl při založení hry
+- [ ] varianty:
+  - [ ] `military`
+  - [ ] `adventure`
+  - [ ] `mystic`
 
 ---
 
-# PRIORITA 5 — POKLADY
-
-## Současný směr ponechat
-👉 poklad zůstává samostatná entita, zatím nebudeme refaktorovat do POI
-
-## Pravidla
-- [x] kdo první najde, ten vybere
-- [x] po sebrání zmizí / změní stav
-- [ ] musí se propsat do hráčovy karty / výsledovky
-- [ ] musí se propsat do admin výsledovky
-- [ ] odlišit víc chování POI vs. treasure v UX
-
-## Další kroky
-- [ ] lépe odlišit marker pokladu od markeru POI
-- [ ] vymyslet UX hledání pokladu bez automatického reveal modalu
-- [ ] volitelně přidat pokladům média až po stabilizaci player UX
-
----
-
-# MEDIA / OBSAH
+# PRIORITA 9 — MEDIA / OBSAH
 
 ## Hotovo
 - [x] POI media přes `poi_media`
 - [x] obrázky v detailu POI
 - [x] YouTube v detailu POI
-- [x] admin formuláře POI rozšířené o média
 
 ## Dále
-- [ ] dokončit ukládání médií v adminu včetně uploadu obrázků
-- [ ] ukládání uploadů do `/public/uploads/games/{game_id}/pois/{poi_id}/`
-- [ ] validace uploadu (jpg/png/webp, velikost)
-- [ ] ponechat možnost kombinace: externí historický obrázek + vlastní aktuální fotka + YouTube
-- [ ] neomezovat počet příloh na 3, ale mít 0 až N
-- [ ] stejný systém médií později pro poklady
+- [ ] upload obrázků v adminu dotáhnout plně
+- [ ] ukládání do `/public/uploads/games/{game_id}/pois/{poi_id}/`
+- [ ] validace uploadu
+- [ ] 0 až N příloh
+- [ ] kombinace externí URL + vlastní foto + YouTube
+- [ ] později stejný systém i pro poklady
 
 ---
 
-# SELF-SERVICE REŽIM
-
-- [ ] zobrazit progress hráče
-- [ ] dokončení hry
-- [ ] výsledovka bez organizátora
-- [ ] jasné flow bez zásahu admina
-- [ ] SOS v self-service buď vypnout, nebo jen logovat
-
----
-
-# MODEROVANÝ REŽIM (POZDĚJI)
-
-- [ ] admin mapa hráčů
-- [ ] live dashboard
-- [ ] SOS panel
-- [ ] broadcast zprávy
-- [ ] výsledky
-- [ ] chat (team / global)
-- [ ] zásahy admina
-
----
-
-# STABILIZACE / ÚKLID
+# PRIORITA 10 — STABILIZACE / ÚKLID
 
 - [ ] odstranit `.DS_Store`
 - [ ] opravit `.gitignore`
 - [ ] přesunout backupy mimo repo
-- [ ] sjednotit názvy repository
-- [ ] odstranit warningy
 - [ ] cleanup hotfixů
+- [ ] odstranit warningy / notices
 - [ ] verzované SQL migrace
-- [ ] zkontrolovat, že TODO neobsahuje staré poznámky a slepé větve
+- [ ] uklidit staré view, které už nemají žít vlastním layoutem
 
 ---
 
-# WORKFLOW
+# NEJBLIŽŠÍ KONKRÉTNÍ KROK NA RÁNO
 
-- [ ] práce přes VS Code SSH
-- [ ] malé commity
-- [ ] push → server pull
-- [ ] DB změny zapisovat do SQL
-- [ ] větší UX zásahy nejdřív zkusit na jedné obrazovce, ne plošně
+## Varianta A — nejpraktičtější
+- [ ] napojit na shared header/footer:
+  - [ ] `games/create.php`
+  - [ ] `games/show.php`
+  - [ ] `users/index.php`
 
----
+## Varianta B — správný produktový krok
+- [ ] navrhnout dashboard správce jedné hry:
+  - [ ] výsledovka
+  - [ ] help requesty
+  - [ ] poslední známé polohy
+  - [ ] seznam průchodů
 
-# NEJBLIŽŠÍ KONKRÉTNÍ KROK
-
-## Varianta A — nejvyšší dopad
-- [ ] předělat `player/dashboard.php` do čitelnějšího mapového layoutu
-- [ ] přesunout SOS do player card
-- [ ] odstranit technický text `GPS OK (xxm)`
-- [ ] stabilizovat timer / horní pravý panel
-- [ ] oddělit chování POI a treasure v UX
-
-## Varianta B — paralelně
-- [ ] připravit DB a helpery pro XP / level / leaderboard
-- [ ] přidat `level_scheme` do hry
-- [ ] navrhnout první 3 stupnice hodností
-
+## Varianta C — hráčský release krok
+- [ ] briefing konkrétní hry
+- [ ] player card
+- [ ] výsledovka hráče
