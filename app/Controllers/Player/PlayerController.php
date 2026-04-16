@@ -183,10 +183,9 @@ final class PlayerController
         $gameId = (int) $session['game_id'];
         $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
 
-        $this->playerRepo->updateLocation($playerId, $lat, $lon, $accuracy);
+        //$this->playerRepo->updateLocation($playerId, $lat, $lon, $accuracy);
         $this->playerRepo->logLocation($playerId, $lat, $lon, $accuracy);
 
-        $this->checkPoiVisits($playerId, $gameId, $teamId, $lat, $lon, $accuracy);
 
         echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     }
@@ -249,6 +248,235 @@ final class PlayerController
         ], JSON_UNESCAPED_UNICODE);
     }
 
+    public function exploreNearby(): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    
+    try {
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+        
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+
+        if ($lat === 0.0 && $lon === 0.0) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'error' => 'missing_location',
+                'message' => 'Chybí poloha hráče.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $gameId = (int) $session['game_id'];
+        $playerId = (int) $session['player_id'];
+
+        $pois = $this->poiRepo->activeForGame($gameId);
+        $candidates = [];
+
+        foreach ($pois as $poi) {
+            $poiId = (int) $poi['id'];
+
+            if ($this->hasPoiVisit($playerId, $poiId)) {
+                continue;
+            }
+
+            $distance = $this->distanceMeters(
+                $lat,
+                $lon,
+                (float) $poi['lat'],
+                (float) $poi['lon']
+            );
+
+            if ($distance > (float) $poi['radius_m']) {
+                continue;
+            }
+
+            $poi['distance_m'] = round($distance, 1);
+            $poi['media'] = $this->poiRepo->getMedia($poiId);
+            $poi['object_type'] = 'poi';
+
+            $candidates[] = $poi;
+        }
+
+        usort($candidates, static function (array $a, array $b): int {
+            return ($a['distance_m'] <=> $b['distance_m']);
+        });
+
+        $count = count($candidates);
+
+        if ($count === 0) {
+            echo json_encode([
+                'success' => true,
+                'type' => 'none',
+                'message' => 'V okolí jsi nic zajímavého nenašel.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        if ($count === 1) {
+            $poi = $candidates[0];
+
+            echo json_encode([
+                'success' => true,
+                'type' => 'single',
+                'object' => [
+                    'object_type' => 'poi',
+                    'id' => (int) $poi['id'],
+                    'title' => (string) ($poi['title'] ?? ''),
+                    'description' => (string) ($poi['description'] ?? ''),
+                    'lat' => (float) $poi['lat'],
+                    'lon' => (float) $poi['lon'],
+                    'radius_m' => (float) $poi['radius_m'],
+                    'distance_m' => (float) $poi['distance_m'],
+                    'media' => $poi['media'] ?? [],
+                ],
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $objects = array_map(static function (array $poi): array {
+            return [
+                'object_type' => 'poi',
+                'id' => (int) $poi['id'],
+                'title' => (string) ($poi['title'] ?? ''),
+                'distance_m' => (float) ($poi['distance_m'] ?? 0),
+            ];
+        }, $candidates);
+
+        echo json_encode([
+            'success' => true,
+            'type' => 'multiple',
+            'objects' => $objects,
+        ], JSON_UNESCAPED_UNICODE);
+    } catch (\Throwable $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'explore_failed',
+            'message' => $e->getMessage(),
+            'file' => basename($e->getFile()),
+            'line' => $e->getLine(),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+public function completePoi(): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+
+    try {
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $poiId = (int) ($data['poi_id'] ?? 0);
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+        $accuracy = (float) ($data['accuracy'] ?? 0);
+
+        if ($poiId <= 0) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'error' => 'invalid_poi',
+                'message' => 'Neplatné POI.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $playerId = (int) $session['player_id'];
+        $gameId = (int) $session['game_id'];
+        $teamId = isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null;
+
+        if ($this->hasPoiVisit($playerId, $poiId)) {
+            echo json_encode([
+                'success' => true,
+                'status' => 'already_completed',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $pois = $this->poiRepo->activeForGame($gameId);
+        $targetPoi = null;
+
+        foreach ($pois as $poi) {
+            if ((int) $poi['id'] === $poiId) {
+                $targetPoi = $poi;
+                break;
+            }
+        }
+
+        if (!$targetPoi) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'poi_not_found',
+                'message' => 'POI nebylo nalezeno.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $distance = $this->distanceMeters(
+            $lat,
+            $lon,
+            (float) $targetPoi['lat'],
+            (float) $targetPoi['lon']
+        );
+
+        // DOČASNĚ vypnuto kvůli ladění
+        // if ($distance > (float) $targetPoi['radius_m']) {
+        //     http_response_code(409);
+        //     echo json_encode([
+        //         'success' => false,
+        //         'error' => 'too_far',
+        //         'message' => 'Pro potvrzení průzkumu musíš být blíž.',
+        //         'distance_m' => round($distance, 1),
+        //     ], JSON_UNESCAPED_UNICODE);
+        //     return;
+        // }
+
+        // DIAGNOSTIKA: zatím nevoláme recordPoiVisit, jen vrátíme vše potřebné
+        echo json_encode([
+            'success' => true,
+            'status' => 'debug_complete_ok',
+            'poi_id' => $poiId,
+            'player_id' => $playerId,
+            'game_id' => $gameId,
+            'team_id' => $teamId,
+            'lat' => $lat,
+            'lon' => $lon,
+            'accuracy' => $accuracy,
+            'distance_m' => round($distance, 1),
+            'target_poi' => [
+                'id' => (int) $targetPoi['id'],
+                'title' => (string) ($targetPoi['title'] ?? ''),
+                'radius_m' => (float) $targetPoi['radius_m'],
+            ],
+        ], JSON_UNESCAPED_UNICODE);
+    } catch (\Throwable $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'complete_poi_failed',
+            'message' => $e->getMessage(),
+            'file' => basename($e->getFile()),
+            'line' => $e->getLine(),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+    
     public function claimTreasure(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -521,6 +749,41 @@ final class PlayerController
             'event_type' => 'poi_visited',
             'payload_json' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ]);
+    }
+
+    private function serializeExploreObject(array $item): array
+    {
+        if (($item['kind'] ?? '') === 'treasure') {
+            return [
+                'kind' => 'treasure',
+                'id' => (int) $item['id'],
+                'name' => (string) ($item['name'] ?? 'Poklad'),
+                'description' => (string) ($item['description'] ?? ''),
+                'lat' => (float) $item['lat'],
+                'lon' => (float) $item['lon'],
+                'radius_m' => (int) ($item['radius_m'] ?? 0),
+                'distance_m' => (float) ($item['distance_m'] ?? 0),
+                'type' => 'treasure',
+                'claimed_by_player' => (int) ($item['claimed_by_player'] ?? 0),
+                'claimed_by_team' => (int) ($item['claimed_by_team'] ?? 0),
+                'points' => (int) ($item['points'] ?? 0),
+            ];
+        }
+
+        return [
+            'kind' => 'poi',
+            'id' => (int) $item['id'],
+            'name' => (string) ($item['name'] ?? 'Bod'),
+            'description' => (string) ($item['description'] ?? ''),
+            'story_text' => (string) ($item['story_text'] ?? ''),
+            'tts_text' => (string) ($item['tts_text'] ?? ''),
+            'lat' => (float) $item['lat'],
+            'lon' => (float) $item['lon'],
+            'radius_m' => (int) ($item['radius_m'] ?? 0),
+            'distance_m' => (float) ($item['distance_m'] ?? 0),
+            'type' => (string) ($item['type'] ?? 'poi'),
+            'media' => $item['media'] ?? [],
+        ];
     }
 
     private function getVisitedPoiIds(int $playerId, int $gameId): array

@@ -224,7 +224,7 @@ if ($method === 'POST' && preg_match('#^/game/([^/]+)/register$#', $uri, $matche
     exit;
 }
 
-// API
+// API - PLAYER
 if ($method === 'POST' && $uri === '/api/player/location') {
     (new PlayerController())->updateLocation();
     exit;
@@ -245,6 +245,17 @@ if ($method === 'POST' && $uri === '/api/player/claim') {
     exit;
 }
 
+if ($method === 'POST' && $uri === '/api/player/explore') {
+    (new PlayerController())->exploreNearby();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/poi/complete') {
+    (new PlayerController())->completePoi();
+    exit;
+}
+
 // 404
 http_response_code(404);
+header('Content-Type: text/plain; charset=utf-8');
 echo '404 Not Found';

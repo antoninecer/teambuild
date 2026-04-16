@@ -324,6 +324,87 @@
             color: rgba(15,15,15,0.92);
         }
 
+        .explore-panel {
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: 18px;
+            z-index: 1000;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+        }
+
+        .explore-card {
+            width: min(100%, 520px);
+            background: rgba(255,255,255,0.10);
+            backdrop-filter: blur(22px) saturate(150%);
+            -webkit-backdrop-filter: blur(22px) saturate(150%);
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.10);
+            padding: 14px;
+            pointer-events: auto;
+        }
+
+        .explore-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: rgba(15,15,15,0.92);
+            margin-bottom: 4px;
+        }
+
+        .explore-subline {
+            font-size: 13px;
+            color: rgba(20,20,20,0.74);
+            line-height: 1.35;
+            margin-bottom: 12px;
+        }
+
+        .explore-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .explore-btn {
+            flex: 1;
+            min-width: 180px;
+            padding: 13px 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .explore-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .explore-option {
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: rgba(255,255,255,0.88);
+            cursor: pointer;
+        }
+
+        .explore-option-title {
+            font-weight: 700;
+            font-size: 15px;
+            color: rgba(15,15,15,0.92);
+            margin-bottom: 3px;
+        }
+
+        .explore-option-subline {
+            font-size: 12px;
+            color: rgba(20,20,20,0.68);
+        }
+
         @media (max-width: 520px) {
             .ui-overlay {
                 top: 8px;
@@ -369,6 +450,17 @@
     </div>
 
     <div id="accuracy-warn" class="accuracy-warn">Slabý signál GPS</div>
+
+    <div id="explorePanel" class="explore-panel" style="display:none;">
+        <div class="explore-card">
+            <div id="exploreTitle" class="explore-title">Místo je dost blízko na průzkum.</div>
+            <div id="exploreSubline" class="explore-subline">Jsi v oblasti, kde můžeš něco objevit.</div>
+            <div class="explore-actions">
+                <button id="exploreBtn" class="explore-btn" style="background:#1565c0; color:#fff;" onclick="exploreNearby()">Prozkoumat okolí</button>
+                <button class="explore-btn" style="background:#eceff1; color:#263238;" onclick="hideExplorePanel()">Teď ne</button>
+            </div>
+        </div>
+    </div>
 
     <div id="playerModal" class="modal">
         <div class="modal-content glass-modal">
@@ -468,6 +560,18 @@
         </div>
     </div>
 
+
+    <div id="exploreChoiceModal" class="modal">
+        <div class="modal-content glass-modal">
+            <h2>V okolí je více míst k průzkumu</h2>
+            <div class="player-card-note">Vyber, čemu se chceš věnovat právě teď.</div>
+            <div id="exploreChoiceList" class="explore-list"></div>
+            <div class="modal-btns" style="margin-top:16px;">
+                <button class="modal-btn" style="background:#eee;" onclick="closeExploreChoiceModal()">Zavřít</button>
+            </div>
+        </div>
+    </div>
+
     <div id="helpModal" class="modal">
         <div class="modal-content">
             <h2>Žádost o pomoc</h2>
@@ -490,6 +594,7 @@
             <div class="modal-btns">
                 <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="speakCurrentText()">PŘEČÍST NAHLAS</button>
                 <button class="modal-btn" style="background:#757575; color:#fff;" onclick="stopSpeech()">ZASTAVIT</button>
+                <button id="completePoiBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="completeCurrentPoi()">POTVRDIT PRŮZKUM</button>
                 <button id="claimBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="claimCurrentTreasure()">SEBRAT POKLAD</button>
                 <button class="modal-btn" style="background:#eee;" onclick="closePoiModal()">ZAVŘÍT</button>
             </div>
@@ -518,7 +623,7 @@
         let treasureMarkers = [];
         let pois = [];
         let treasures = [];
-        let openedAutoKeys = new Set();
+        let exploreCandidates = [];
         let currentDetail = null;
         let speechUtterance = null;
 
@@ -668,7 +773,7 @@
             }).catch(console.warn);
 
             updatePlayerCardStats();
-            checkNearbyAutoOpen();
+            refreshExploreAvailability();
         }
 
         function handleError(err) {
@@ -740,7 +845,7 @@
                     renderPois();
                     renderTreasures();
                     updatePlayerCardStats();
-                    checkNearbyAutoOpen();
+                    refreshExploreAvailability();
                 })
                 .catch(err => {
                     console.warn(err);
@@ -766,6 +871,7 @@
             document.getElementById('poiText').innerText = currentDetail.text;
             renderPoiMedia(currentDetail.media);
             document.getElementById('claimBtn').style.display = 'none';
+            document.getElementById('completePoiBtn').style.display = 'inline-block';
 
             let meta = '';
             if (lastPos) {
@@ -791,6 +897,7 @@
                 type: 'treasure',
                 claimed_by_player: Number(treasure.claimed_by_player || 0),
                 claimed_by_team: Number(treasure.claimed_by_team || 0),
+                points: Number(treasure.points || 0),
             };
 
             document.getElementById('poiTitle').innerText = currentDetail.title;
@@ -820,6 +927,7 @@
             }
 
             document.getElementById('poiMeta').innerText = meta;
+            document.getElementById('completePoiBtn').style.display = 'none';
             document.getElementById('claimBtn').style.display = canClaim ? 'inline-block' : 'none';
 
             document.getElementById('poiModal').style.display = 'flex';
@@ -919,22 +1027,179 @@
             });
         }
 
-        function checkNearbyAutoOpen() {
+        function hasNearbyDiscoverableContent() {
             if (!lastPos) {
+                return false;
+            }
+
+            const hasPoi = pois.some(poi => Number(poi.visited_by_player || 0) !== 1 && distanceMeters(lastPos.lat, lastPos.lon, Number(poi.lat), Number(poi.lon)) <= Number(poi.radius_m || 0));
+            const hasTreasure = treasures.some(treasure => distanceMeters(lastPos.lat, lastPos.lon, Number(treasure.lat), Number(treasure.lon)) <= Number(treasure.radius_m || 0));
+            return hasPoi || hasTreasure;
+        }
+
+        function refreshExploreAvailability() {
+            if (hasNearbyDiscoverableContent()) {
+                document.getElementById('explorePanel').style.display = 'flex';
                 return;
             }
 
-            pois.forEach(poi => {
-                const dist = distanceMeters(lastPos.lat, lastPos.lon, Number(poi.lat), Number(poi.lon));
-                const key = 'poi-' + poi.id;
+            hideExplorePanel();
+        }
 
-                if (dist <= Number(poi.radius_m || 0) && !openedAutoKeys.has(key)) {
-                    openedAutoKeys.add(key);
-                    openPoiDetail(poi);
+        function hideExplorePanel() {
+            document.getElementById('explorePanel').style.display = 'none';
+        }
+
+        function exploreNearby() {
+            if (!lastPos) {
+                alert('Nejdřív potřebuji znát tvoji polohu.');
+                return;
+            }
+
+            const button = document.getElementById('exploreBtn');
+            button.disabled = true;
+            button.innerText = 'Prozkoumávám…';
+
+            fetch('/api/player/explore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat: lastPos.lat, lon: lastPos.lon })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Průzkum se nepodařilo dokončit.');
+                    return;
                 }
+
+                if (data.type === 'none') {
+                    alert(data.message || 'V okolí jsi nic zajímavého nenašel.');
+                    hideExplorePanel();
+                    return;
+                }
+
+                if (data.type === 'single' && data.object) {
+                    hideExplorePanel();
+                    openExploreObject(data.object);
+                    return;
+                }
+
+                if (data.type === 'multiple' && Array.isArray(data.objects)) {
+                    exploreCandidates = data.objects;
+                    openExploreChoiceModal();
+                }
+            })
+            .catch(err => {
+                console.warn(err);
+                alert('Chyba komunikace se serverem.');
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerText = 'Prozkoumat okolí';
+            });
+        }
+
+        function openExploreObject(item) {
+            if (item.kind === 'treasure') {
+                openTreasureDetail(item);
+                return;
+            }
+
+            openPoiDetail(item);
+        }
+
+        function openExploreChoiceModal() {
+            const container = document.getElementById('exploreChoiceList');
+            container.innerHTML = '';
+
+            exploreCandidates.forEach(item => {
+                const button = document.createElement('button');
+                button.className = 'explore-option';
+                button.type = 'button';
+                button.onclick = () => {
+                    closeExploreChoiceModal();
+                    hideExplorePanel();
+                    openExploreObject(item);
+                };
+
+                const title = document.createElement('div');
+                title.className = 'explore-option-title';
+                title.innerText = item.name || 'Místo';
+
+                const sub = document.createElement('div');
+                sub.className = 'explore-option-subline';
+                const typeLabel = item.kind === 'treasure' ? 'Poklad' : 'Bod zájmu';
+                const distance = Math.round(Number(item.distance_m || 0));
+                sub.innerText = typeLabel + ' • přibližně ' + distance + ' m';
+
+                button.appendChild(title);
+                button.appendChild(sub);
+                container.appendChild(button);
             });
 
-            // Poklady se automaticky neotevírají.
+            document.getElementById('exploreChoiceModal').style.display = 'flex';
+        }
+
+        function closeExploreChoiceModal() {
+            document.getElementById('exploreChoiceModal').style.display = 'none';
+        }
+
+        function completeCurrentPoi() {
+            if (!currentDetail || currentDetail.kind !== 'poi') {
+                return;
+            }
+
+            if (!lastPos) {
+                alert('Neznám tvoji aktuální polohu.');
+                return;
+            }
+
+            fetch('/api/player/poi/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    poi_id: currentDetail.id,
+                    lat: lastPos.lat,
+                    lon: lastPos.lon,
+                    accuracy: Number(lastPos.acc || 0)
+                })
+            })
+            .then(async response => {
+                const data = await response.json();
+
+                if (!data.success) {
+                    if (data.status === 'too_far') {
+                        alert('Na potvrzení průzkumu jsi zatím příliš daleko.');
+                    } else {
+                        alert('Nepodařilo se potvrdit průzkum místa.');
+                    }
+                    return;
+                }
+
+                const poi = pois.find(item => Number(item.id) === Number(currentDetail.id));
+                if (poi) {
+                    poi.visited_by_player = 1;
+                }
+
+                initialPlayerStats.tasks_done = Number(initialPlayerStats.tasks_done || 0) + (data.status === 'completed' ? 1 : 0);
+                if (Number(initialPlayerStats.tasks_total || 0) > 0) {
+                    initialPlayerStats.progress_percent = Math.round((Number(initialPlayerStats.tasks_done || 0) / Number(initialPlayerStats.tasks_total || 1)) * 100);
+                }
+
+                closePoiModal();
+                reloadMapData();
+
+                if (Array.isArray(data.unlocked_treasures) && data.unlocked_treasures.length > 0) {
+                    const names = data.unlocked_treasures.map(item => item.name || 'Poklad').join(', ');
+                    alert('Průzkum dokončen. Odemčeno: ' + names);
+                } else {
+                    alert('Průzkum místa byl potvrzen.');
+                }
+            })
+            .catch(err => {
+                console.warn(err);
+                alert('Chyba komunikace se serverem.');
+            });
         }
 
         function openPlayerCard() {
@@ -994,6 +1259,7 @@
 
         reloadMapData();
         updatePlayerCardStats();
+        refreshExploreAvailability();
     </script>
 </body>
 </html>
