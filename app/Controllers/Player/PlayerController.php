@@ -248,7 +248,7 @@ final class PlayerController
         ], JSON_UNESCAPED_UNICODE);
     }
 
-    public function exploreNearby(): void
+   public function exploreNearby(): void
 {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -276,9 +276,12 @@ final class PlayerController
 
         $gameId = (int) $session['game_id'];
         $playerId = (int) $session['player_id'];
+        $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
 
-        $pois = $this->poiRepo->activeForGame($gameId);
         $candidates = [];
+
+        // 1) POI
+        $pois = $this->poiRepo->activeForGame($gameId);
 
         foreach ($pois as $poi) {
             $poiId = (int) $poi['id'];
@@ -300,7 +303,38 @@ final class PlayerController
 
             $poi['distance_m'] = round($distance, 1);
             $poi['media'] = $this->poiRepo->getMedia($poiId);
+            $poi['kind'] = 'poi';
+
             $candidates[] = $poi;
+        }
+
+        // 2) TREASURES
+        $treasures = $this->treasureRepo->visibleForGameWithClaimState($gameId, $playerId, $teamId);
+
+        foreach ($treasures as $treasure) {
+            if ((int) ($treasure['claimed_by_player'] ?? 0) === 1) {
+                continue;
+            }
+
+            if ((int) ($treasure['claimed_by_team'] ?? 0) === 1) {
+                continue;
+            }
+
+            $distance = $this->distanceMeters(
+                $lat,
+                $lon,
+                (float) $treasure['lat'],
+                (float) $treasure['lon']
+            );
+
+            if ($distance > (float) $treasure['radius_m']) {
+                continue;
+            }
+
+            $treasure['distance_m'] = round($distance, 1);
+            $treasure['kind'] = 'treasure';
+
+            $candidates[] = $treasure;
         }
 
         usort($candidates, static function (array $a, array $b): int {
@@ -318,24 +352,23 @@ final class PlayerController
                     'player_lat' => $lat,
                     'player_lon' => $lon,
                     'pois_total' => count($pois),
+                    'treasures_total' => count($treasures),
                 ],
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
 
         if ($count === 1) {
-            $poi = $candidates[0];
-
             echo json_encode([
                 'success' => true,
                 'type' => 'single',
-                'object' => $this->serializeExploreObject($poi),
+                'object' => $this->serializeExploreObject($candidates[0]),
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
 
-        $objects = array_map(function (array $poi): array {
-            return $this->serializeExploreObject($poi);
+        $objects = array_map(function (array $item): array {
+            return $this->serializeExploreObject($item);
         }, $candidates);
 
         echo json_encode([
@@ -352,8 +385,10 @@ final class PlayerController
             'file' => basename($e->getFile()),
             'line' => $e->getLine(),
         ], JSON_UNESCAPED_UNICODE);
-        }
-    }   
+    }
+}
+    
+    
     public function completePoi(): void
 {
     header('Content-Type: application/json; charset=utf-8');
