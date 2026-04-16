@@ -179,8 +179,14 @@ final class PlayerController
         $lon = (float) ($data['lon'] ?? 0);
         $accuracy = (float) ($data['accuracy'] ?? 0);
 
-        $this->playerRepo->updateLocation((int) $session['player_id'], $lat, $lon, $accuracy);
-        $this->playerRepo->logLocation((int) $session['player_id'], $lat, $lon, $accuracy);
+        $playerId = (int) $session['player_id'];
+        $gameId = (int) $session['game_id'];
+        $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
+
+        $this->playerRepo->updateLocation($playerId, $lat, $lon, $accuracy);
+        $this->playerRepo->logLocation($playerId, $lat, $lon, $accuracy);
+
+        $this->checkPoiVisits($playerId, $gameId, $teamId, $lat, $lon, $accuracy);
 
         echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     }
@@ -225,9 +231,11 @@ final class PlayerController
         $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
 
         $pois = $this->poiRepo->activeForGame($gameId);
+        $visitedPoiIds = $this->getVisitedPoiIds($playerId, $gameId);
 
         foreach ($pois as &$poi) {
             $poi['media'] = $this->poiRepo->getMedia((int) $poi['id']);
+            $poi['visited_by_player'] = in_array((int) $poi['id'], $visitedPoiIds, true) ? 1 : 0;
         }
         unset($poi);
 
@@ -237,6 +245,7 @@ final class PlayerController
             'success' => true,
             'pois' => array_values($pois),
             'treasures' => array_values($treasures),
+            'visited_poi_ids' => $visitedPoiIds,
         ], JSON_UNESCAPED_UNICODE);
     }
 
@@ -317,6 +326,20 @@ final class PlayerController
         ]);
         $playerRow = $playerStmt->fetch(PDO::FETCH_ASSOC) ?: ['points' => 0, 'treasures_found' => 0];
 
+        $poiVisitsStmt = $pdo->prepare(
+            'SELECT COUNT(*) AS pois_visited
+             FROM events
+             WHERE game_id = :game_id
+               AND player_id = :player_id
+               AND event_type = :event_type'
+        );
+        $poiVisitsStmt->execute([
+            'game_id' => $gameId,
+            'player_id' => $playerId,
+            'event_type' => 'poi_visited',
+        ]);
+        $poiVisitsRow = $poiVisitsStmt->fetch(PDO::FETCH_ASSOC) ?: ['pois_visited' => 0];
+
         $leaderboard = $this->buildLeaderboard($gameId);
 
         $rank = 0;
@@ -327,13 +350,17 @@ final class PlayerController
             }
         }
 
+        $poisVisited = (int) $poiVisitsRow['pois_visited'];
+        $treasuresFound = (int) $playerRow['treasures_found'];
+
         $tasksTotal = (int) $totals['total_pois'] + (int) $totals['total_treasures'];
-        $tasksDone = (int) $playerRow['treasures_found']; // zatím reálně máme jen claimnuté poklady
+        $tasksDone = $poisVisited + $treasuresFound;
         $progressPercent = $tasksTotal > 0 ? (int) round(($tasksDone / $tasksTotal) * 100) : 0;
 
         return [
             'points' => (int) $playerRow['points'],
-            'treasures_found' => (int) $playerRow['treasures_found'],
+            'treasures_found' => $treasuresFound,
+            'pois_visited' => $poisVisited,
             'total_pois' => (int) $totals['total_pois'],
             'total_treasures' => (int) $totals['total_treasures'],
             'tasks_total' => $tasksTotal,
@@ -352,7 +379,14 @@ final class PlayerController
                 p.id AS player_id,
                 p.nickname,
                 COALESCE(SUM(COALESCE(t.points, 0)), 0) AS points,
-                COUNT(t.id) AS treasures_found
+                COUNT(t.id) AS treasures_found,
+                (
+                    SELECT COUNT(*)
+                    FROM events e
+                    WHERE e.game_id = :game_id
+                      AND e.player_id = p.id
+                      AND e.event_type = :event_type
+                ) AS pois_visited
              FROM players p
              LEFT JOIN treasure_claims tc
                 ON tc.player_id = p.id
@@ -361,10 +395,13 @@ final class PlayerController
                AND t.game_id = :game_id
              WHERE p.game_id = :game_id
              GROUP BY p.id, p.nickname
-             ORDER BY points DESC, treasures_found DESC, p.nickname ASC'
+             ORDER BY points DESC, treasures_found DESC, pois_visited DESC, p.nickname ASC'
         );
 
-        $stmt->execute(['game_id' => $gameId]);
+        $stmt->execute([
+            'game_id' => $gameId,
+            'event_type' => 'poi_visited',
+        ]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $rank = 1;
@@ -374,6 +411,157 @@ final class PlayerController
         unset($row);
 
         return $rows;
+    }
+
+    private function checkPoiVisits(
+        int $playerId,
+        int $gameId,
+        ?int $teamId,
+        float $lat,
+        float $lon,
+        float $accuracy
+    ): void {
+        $pois = $this->poiRepo->activeForGame($gameId);
+
+        foreach ($pois as $poi) {
+            $poiId = (int) $poi['id'];
+
+            if ($this->hasPoiVisit($playerId, $poiId)) {
+                continue;
+            }
+
+            $distance = $this->distanceMeters(
+                $lat,
+                $lon,
+                (float) $poi['lat'],
+                (float) $poi['lon']
+            );
+
+            if ($distance > (float) $poi['radius_m']) {
+                continue;
+            }
+
+            $this->recordPoiVisit(
+                $gameId,
+                $playerId,
+                $teamId,
+                $poiId,
+                $lat,
+                $lon,
+                $accuracy,
+                $distance
+            );
+        }
+    }
+
+    private function hasPoiVisit(int $playerId, int $poiId): bool
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT 1
+             FROM events
+             WHERE player_id = :player_id
+               AND poi_id = :poi_id
+               AND event_type = :event_type
+             LIMIT 1'
+        );
+
+        $stmt->execute([
+            'player_id' => $playerId,
+            'poi_id' => $poiId,
+            'event_type' => 'poi_visited',
+        ]);
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    private function recordPoiVisit(
+        int $gameId,
+        int $playerId,
+        ?int $teamId,
+        int $poiId,
+        float $lat,
+        float $lon,
+        float $accuracy,
+        float $distance
+    ): void {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO events (
+                game_id,
+                player_id,
+                team_id,
+                poi_id,
+                event_type,
+                payload_json
+             ) VALUES (
+                :game_id,
+                :player_id,
+                :team_id,
+                :poi_id,
+                :event_type,
+                :payload_json
+             )'
+        );
+
+        $payload = [
+            'lat' => $lat,
+            'lon' => $lon,
+            'accuracy' => $accuracy,
+            'distance_m' => round($distance, 2),
+        ];
+
+        $stmt->execute([
+            'game_id' => $gameId,
+            'player_id' => $playerId,
+            'team_id' => $teamId,
+            'poi_id' => $poiId,
+            'event_type' => 'poi_visited',
+            'payload_json' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+    }
+
+    private function getVisitedPoiIds(int $playerId, int $gameId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT poi_id
+             FROM events
+             WHERE game_id = :game_id
+               AND player_id = :player_id
+               AND event_type = :event_type
+               AND poi_id IS NOT NULL'
+        );
+
+        $stmt->execute([
+            'game_id' => $gameId,
+            'player_id' => $playerId,
+            'event_type' => 'poi_visited',
+        ]);
+
+        $rows = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+        return array_map('intval', $rows);
+    }
+
+    private function distanceMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadius = 6371000.0;
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a =
+            sin($dLat / 2) * sin($dLat / 2) +
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+            sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 
     private function getSession(): ?array
