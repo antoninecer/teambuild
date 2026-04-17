@@ -18,6 +18,7 @@ final class PlayerRepository
                 team_id,
                 invite_id,
                 nickname,
+                phone,
                 registered_at,
                 status
             ) VALUES (
@@ -25,6 +26,7 @@ final class PlayerRepository
                 :team_id,
                 :invite_id,
                 :nickname,
+                :phone,
                 NOW(),
                 :status
             )'
@@ -35,6 +37,7 @@ final class PlayerRepository
             'team_id' => $data['team_id'] ?? null,
             'invite_id' => $data['invite_id'] ?? null,
             'nickname' => $data['nickname'],
+            'phone' => $data['phone'] ?? null,
             'status' => $data['status'] ?? 'active',
         ]);
 

@@ -18,6 +18,11 @@ if (!empty($player['last_lat']) && !empty($player['last_lon'])) {
     $mapsUrl = 'https://maps.google.com/?q=' . rawurlencode((string)$player['last_lat'] . ',' . (string)$player['last_lon']);
 }
 
+$phoneLink = null;
+if (!empty($player['phone'])) {
+    $phoneLink = 'tel:' . preg_replace('/[^\d+]/', '', (string)$player['phone']);
+}
+
 function eventLabel(array $event): string
 {
     $type = (string)($event['event_type'] ?? '');
@@ -150,6 +155,10 @@ function eventDetail(array $event): string
             <?php if ($mapsUrl): ?>
                 <a class="btn btn-secondary" href="<?= htmlspecialchars($mapsUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Otevřít v mapách</a>
             <?php endif; ?>
+
+            <?php if ($phoneLink): ?>
+                <a class="btn btn-secondary" href="<?= htmlspecialchars($phoneLink, ENT_QUOTES, 'UTF-8') ?>">Zavolat</a>
+            <?php endif; ?>
         </div>
     </div>
 <?php endif; ?>
@@ -161,10 +170,17 @@ function eventDetail(array $event): string
             <div class="quick-grid">
                 <div><strong>ID:</strong></div><div><?= (int) $player['id'] ?></div>
                 <div><strong>Nickname:</strong></div><div><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></div>
+                <div><strong>Telefon:</strong></div><div><?= !empty($player['phone']) ? htmlspecialchars((string)$player['phone'], ENT_QUOTES, 'UTF-8') : '-' ?></div>
                 <div><strong>Registrace:</strong></div><div><?= htmlspecialchars((string)$player['registered_at'], ENT_QUOTES, 'UTF-8') ?></div>
                 <div><strong>Poslední aktivita:</strong></div><div><?= $player['last_seen_at'] ? htmlspecialchars((string)$player['last_seen_at'], ENT_QUOTES, 'UTF-8') : 'Nikdy' ?></div>
                 <div><strong>Přesnost GPS:</strong></div><div><?= $player['last_accuracy'] ? round((float)$player['last_accuracy'], 1) . ' m' : '-' ?></div>
             </div>
+
+            <?php if ($phoneLink): ?>
+                <div class="small-actions">
+                    <a class="btn btn-secondary" href="<?= htmlspecialchars($phoneLink, ENT_QUOTES, 'UTF-8') ?>">Zavolat hráči</a>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="card" style="margin-top: 20px;">
@@ -266,8 +282,8 @@ function eventDetail(array $event): string
         <div class="card">
             <h3>Poslední známá poloha</h3>
             <div id="map" style="height: 400px; border-radius: 12px; border: 1px solid var(--line); z-index: 1;"></div>
-            <?php if (!$player['last_lat']): ?>
-                <p class="help" style="margin-top: 10px;">Poloha hráče zatím není známa.</p>
+            <?php if (!$player['last_lat'] && !$lastKnownPosition): ?>
+                 <p class="help" style="margin-top: 10px;">Poloha hráče zatím není známa.</p>
             <?php endif; ?>
         </div>
 
@@ -347,33 +363,48 @@ function eventDetail(array $event): string
         }
     }
 
-    const playerLat = <?= $player['last_lat'] ? (float)$player['last_lat'] : 'null' ?>;
-    const playerLon = <?= $player['last_lon'] ? (float)$player['last_lon'] : 'null' ?>;
-    const mapCenter = [
-        playerLat || <?= (float)($game['map_center_lat'] ?? 50.0755) ?>,
-        playerLon || <?= (float)($game['map_center_lon'] ?? 14.4378) ?>
-    ];
+    const playerLat = <?= $player['last_lat'] !== null ? (float)$player['last_lat'] : 'null' ?>;
+const playerLon = <?= $player['last_lon'] !== null ? (float)$player['last_lon'] : 'null' ?>;
 
-    const map = L.map('map').setView(mapCenter, playerLat ? 16 : <?= (int)($game['map_default_zoom'] ?? 14) ?>);
+const fallbackLat = <?= $lastKnownPosition ? (float)$lastKnownPosition['lat'] : 'null' ?>;
+const fallbackLon = <?= $lastKnownPosition ? (float)$lastKnownPosition['lon'] : 'null' ?>;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+const effectiveLat = playerLat !== null ? playerLat : fallbackLat;
+const effectiveLon = playerLon !== null ? playerLon : fallbackLon;
 
-    if (playerLat && playerLon) {
-        L.marker([playerLat, playerLon]).addTo(map)
-            .bindPopup("<?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?>")
-            .openPopup();
+const mapCenter = [
+    effectiveLat !== null ? effectiveLat : <?= (float)($game['map_center_lat'] ?? 50.0755) ?>,
+    effectiveLon !== null ? effectiveLon : <?= (float)($game['map_center_lon'] ?? 14.4378) ?>
+];
 
-        <?php if (!empty($locationHistory)): ?>
-            const pathPoints = [
-                <?php foreach (array_reverse($locationHistory) as $log): ?>
-                    [<?= (float)$log['lat'] ?>, <?= (float)$log['lon'] ?>],
-                <?php endforeach; ?>
-            ];
-            L.polyline(pathPoints, {color: 'red', weight: 3, opacity: 0.5}).addTo(map);
-        <?php endif; ?>
-    }
+const map = L.map('map').setView(
+    mapCenter,
+    effectiveLat !== null && effectiveLon !== null ? 16 : <?= (int)($game['map_default_zoom'] ?? 14) ?>
+);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+<?php if (!empty($locationHistory)): ?>
+const pathPoints = [
+    <?php foreach (array_reverse($locationHistory) as $log): ?>
+        [<?= (float)$log['lat'] ?>, <?= (float)$log['lon'] ?>],
+    <?php endforeach; ?>
+];
+<?php else: ?>
+const pathPoints = [];
+<?php endif; ?>
+
+if (pathPoints.length > 0) {
+    L.polyline(pathPoints, { color: 'red', weight: 3, opacity: 0.5 }).addTo(map);
+}
+
+if (effectiveLat !== null && effectiveLon !== null) {
+    L.marker([effectiveLat, effectiveLon]).addTo(map)
+        .bindPopup("<?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?>")
+        .openPopup();
+}
 </script>
 
 <?php require __DIR__ . '/../partials/footer.php'; ?>

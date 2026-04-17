@@ -72,87 +72,104 @@ final class PlayerController
     }
 
     public function register(string $slug): void
-    {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $game = $this->gameRepo->findBySlug($slug);
-
-        if (!$game) {
-            http_response_code(404);
-            echo "Hra nenalezena.";
-            return;
-        }
-
-        if (!in_array($game['status'], ['registration_open', 'active'], true)) {
-            http_response_code(403);
-            echo "Registrace do této hry není možná.";
-            return;
-        }
-
-        $nickname = trim($_POST['nickname'] ?? '');
-        $inviteCode = trim($_POST['invite_code'] ?? '');
-
-        if ($inviteCode === '' && isset($_SESSION['invite_code'])) {
-            $inviteCode = $_SESSION['invite_code'];
-        }
-
-        if ($nickname === '') {
-            $error = "Nickname musí být vyplněn.";
-            require __DIR__ . '/../../../resources/views/player/register.php';
-            return;
-        }
-
-        if ($this->playerRepo->findByNicknameInGame($nickname, (int) $game['id'])) {
-            $error = "Tento nickname je již obsazen.";
-            require __DIR__ . '/../../../resources/views/player/register.php';
-            return;
-        }
-
-        $invite = null;
-
-        if ($inviteCode !== '') {
-            $invite = $this->inviteRepo->findByCode($inviteCode);
-
-            if (!$invite || (int) $invite['game_id'] !== (int) $game['id'] || (int) $invite['is_active'] === 0) {
-                $error = "Neplatný invite kód.";
-                require __DIR__ . '/../../../resources/views/player/register.php';
-                return;
-            }
-
-            if ($invite['max_uses'] !== null && (int) $invite['used_count'] >= (int) $invite['max_uses']) {
-                $error = "Invite je vyčerpaný.";
-                require __DIR__ . '/../../../resources/views/player/register.php';
-                return;
-            }
-        }
-
-        $playerId = $this->playerRepo->create([
-            'game_id' => $game['id'],
-            'nickname' => $nickname,
-            'invite_id' => $invite ? $invite['id'] : null,
-            'team_id' => $invite ? $invite['team_id'] : null,
-            'status' => 'active',
-        ]);
-
-        if ($invite) {
-            $this->inviteRepo->incrementUsage((int) $invite['id']);
-        }
-
-        $token = bin2hex(random_bytes(32));
-        $tokenHash = hash('sha256', $token);
-        $expiresAt = date('Y-m-d H:i:s', time() + 365 * 24 * 60 * 60);
-
-        $this->playerRepo->createSession($playerId, $tokenHash, $expiresAt);
-
-        setcookie('player_session', $token, time() + 365 * 24 * 60 * 60, '/');
-
-        unset($_SESSION['invite_code']);
-
-        header('Location: /game/' . $game['slug']);
-        exit;
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
     }
+
+    $game = $this->gameRepo->findBySlug($slug);
+
+    if (!$game) {
+        http_response_code(404);
+        echo "Hra nenalezena.";
+        return;
+    }
+
+    if (!in_array($game['status'], ['registration_open', 'active'], true)) {
+        http_response_code(403);
+        echo "Registrace do této hry není možná.";
+        return;
+    }
+
+    $nickname = trim($_POST['nickname'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $phone = preg_replace('/[^\d+\s\-\(\)]/u', '', $phone) ?? '';
+    $phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';
+
+    $inviteCode = trim($_POST['invite_code'] ?? '');
+
+    if ($inviteCode === '' && isset($_SESSION['invite_code'])) {
+        $inviteCode = $_SESSION['invite_code'];
+    }
+
+    if ($nickname === '') {
+        $error = "Nickname musí být vyplněn.";
+        require __DIR__ . '/../../../resources/views/player/register.php';
+        return;
+    }
+
+    if ($phone === '') {
+        $error = "Telefonní kontakt musí být vyplněn.";
+        require __DIR__ . '/../../../resources/views/player/register.php';
+        return;
+    }
+
+    if (strlen($phoneDigits) < 9 || strlen($phoneDigits) > 15) {
+        $error = "Telefonní kontakt nevypadá platně.";
+        require __DIR__ . '/../../../resources/views/player/register.php';
+        return;
+    }
+
+    if ($this->playerRepo->findByNicknameInGame($nickname, (int) $game['id'])) {
+        $error = "Tento nickname je již obsazen.";
+        require __DIR__ . '/../../../resources/views/player/register.php';
+        return;
+    }
+
+    $invite = null;
+
+    if ($inviteCode !== '') {
+        $invite = $this->inviteRepo->findByCode($inviteCode);
+
+        if (!$invite || (int) $invite['game_id'] !== (int) $game['id'] || (int) $invite['is_active'] === 0) {
+            $error = "Neplatný invite kód.";
+            require __DIR__ . '/../../../resources/views/player/register.php';
+            return;
+        }
+
+        if ($invite['max_uses'] !== null && (int) $invite['used_count'] >= (int) $invite['max_uses']) {
+            $error = "Invite je vyčerpaný.";
+            require __DIR__ . '/../../../resources/views/player/register.php';
+            return;
+        }
+    }
+
+    $playerId = $this->playerRepo->create([
+        'game_id' => $game['id'],
+        'nickname' => $nickname,
+        'phone' => $phone,
+        'invite_id' => $invite ? $invite['id'] : null,
+        'team_id' => $invite ? $invite['team_id'] : null,
+        'status' => 'active',
+    ]);
+
+    if ($invite) {
+        $this->inviteRepo->incrementUsage((int) $invite['id']);
+    }
+
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+    $expiresAt = date('Y-m-d H:i:s', time() + 365 * 24 * 60 * 60);
+
+    $this->playerRepo->createSession($playerId, $tokenHash, $expiresAt);
+
+    setcookie('player_session', $token, time() + 365 * 24 * 60 * 60, '/');
+
+    unset($_SESSION['invite_code']);
+
+    header('Location: /game/' . $game['slug']);
+    exit;
+}
 
     public function dashboard(int $playerId, array $game): void
     {
@@ -163,33 +180,39 @@ final class PlayerController
         require __DIR__ . '/../../../resources/views/player/dashboard.php';
     }
 
-    public function updateLocation(): void
-    {
-        header('Content-Type: application/json; charset=utf-8');
+public function updateLocation(): void
+{
+    header('Content-Type: application/json; charset=utf-8');
 
-        $session = $this->getSession();
-        if (!$session) {
-            $this->unauthorized();
-            return;
-        }
-
-        $data = json_decode(file_get_contents('php://input'), true);
-
-        $lat = (float) ($data['lat'] ?? 0);
-        $lon = (float) ($data['lon'] ?? 0);
-        $accuracy = (float) ($data['accuracy'] ?? 0);
-
-        $playerId = (int) $session['player_id'];
-        $gameId = (int) $session['game_id'];
-        $teamId = isset($session['team_id']) ? (int) $session['team_id'] : null;
-
-        //$this->playerRepo->updateLocation($playerId, $lat, $lon, $accuracy);
-        $this->playerRepo->logLocation($playerId, $lat, $lon, $accuracy);
-
-
-        echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
+    $session = $this->getSession();
+    if (!$session) {
+        $this->unauthorized();
+        return;
     }
 
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    $lat = (float) ($data['lat'] ?? 0);
+    $lon = (float) ($data['lon'] ?? 0);
+    $accuracy = (float) ($data['accuracy'] ?? 0);
+
+    if ($lat === 0.0 && $lon === 0.0) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'error' => 'missing_location',
+            'message' => 'Chybí platná poloha hráče.',
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+
+    $playerId = (int) $session['player_id'];
+
+    $this->playerRepo->updateLocation($playerId, $lat, $lon, $accuracy);
+    $this->playerRepo->logLocation($playerId, $lat, $lon, $accuracy);
+
+    echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
+}
     public function requestHelp(): void
     {
         header('Content-Type: application/json; charset=utf-8');

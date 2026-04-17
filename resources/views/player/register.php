@@ -9,8 +9,9 @@
         body {
             font-family: sans-serif;
             padding: 20px;
-            max-width: 420px;
+            max-width: 460px;
             margin: 0 auto;
+            line-height: 1.45;
         }
 
         h1 {
@@ -20,31 +21,46 @@
         .info {
             background: #eef6ff;
             border: 1px solid #90c2ff;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        .warning {
+            background: #fff8e8;
+            border: 1px solid #e3c675;
+            padding: 12px;
+            margin-bottom: 18px;
+            border-radius: 8px;
         }
 
         .error {
-            color: red;
+            color: #8b0000;
             background: #fee;
-            padding: 10px;
-            border: 1px solid red;
+            padding: 12px;
+            border: 1px solid #d66;
             margin-bottom: 20px;
+            border-radius: 8px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            font-weight: 600;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        input[type="tel"] {
             width: 100%;
-            padding: 10px;
+            padding: 11px;
             box-sizing: border-box;
+            border: 1px solid #bbb;
+            border-radius: 8px;
+            font-size: 16px;
         }
 
         input[readonly] {
@@ -52,12 +68,15 @@
         }
 
         button {
-            padding: 12px;
+            padding: 13px;
             background: #000;
             color: white;
             border: none;
             cursor: pointer;
             width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
         }
 
         button:hover {
@@ -67,14 +86,19 @@
         .hint {
             font-size: 12px;
             color: #666;
-            margin-top: 5px;
+            margin-top: 6px;
         }
     </style>
 </head>
 <body>
 
 <h1><?php echo htmlspecialchars($game['name']); ?></h1>
-<p>Zadej svoji přezdívku pro vstup do hry.</p>
+<p>Zadej svoje údaje pro vstup do hry.</p>
+
+<div class="warning">
+    <strong>Doporučení před startem:</strong><br>
+    Měj nabitý telefon, zapnutou polohu a ideálně i připravenou powerbanku.
+</div>
 
 <?php if (!empty($inviteCode)): ?>
     <div class="info">
@@ -99,8 +123,19 @@
                autofocus>
     </div>
 
+    <div class="form-group">
+        <label for="phone">Telefonní kontakt pro bezpečnost:</label>
+        <input type="tel"
+               id="phone"
+               name="phone"
+               value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>"
+               required
+               inputmode="tel"
+               autocomplete="tel">
+        <div class="hint">Použije se jen v případě, že bude potřeba rychle řešit pomoc nebo organizační problém.</div>
+    </div>
+
     <?php if (!empty($inviteCode)): ?>
-        <!-- readonly + hidden (jistota) -->
         <div class="form-group">
             <label>Invite kód:</label>
             <input type="text" value="<?php echo htmlspecialchars($inviteCode); ?>" readonly>
@@ -108,7 +143,6 @@
             <div class="hint">Tento kód byl přidělen automaticky.</div>
         </div>
     <?php else: ?>
-        <!-- fallback -->
         <div class="form-group">
             <label for="invite_code">Invite kód (volitelný):</label>
             <input type="text"
