@@ -84,37 +84,41 @@ final class GameRepository
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'INSERT INTO games (
-                name,
-                slug,
-                description,
-                intro_text,
-                starts_at,
-                ends_at,
-                registration_enabled,
-                status,
-                operation_mode,
-                map_center_lat,
-                map_center_lon,
-                map_default_zoom,
-                session_cookie_days,
-                created_by
-            ) VALUES (
-                :name,
-                :slug,
-                :description,
-                :intro_text,
-                :starts_at,
-                :ends_at,
-                :registration_enabled,
-                :status,
-                :operation_mode,
-                :map_center_lat,
-                :map_center_lon,
-                :map_default_zoom,
-                :session_cookie_days,
-                :created_by
-            )'
+'INSERT INTO games (
+    name,
+    slug,
+    description,
+    intro_text,
+    objective_text,
+    player_guide_text,
+    starts_at,
+    ends_at,
+    registration_enabled,
+    status,
+    operation_mode,
+    map_center_lat,
+    map_center_lon,
+    map_default_zoom,
+    session_cookie_days,
+    created_by
+) VALUES (
+    :name,
+    :slug,
+    :description,
+    :intro_text,
+    :objective_text,
+    :player_guide_text,
+    :starts_at,
+    :ends_at,
+    :registration_enabled,
+    :status,
+    :operation_mode,
+    :map_center_lat,
+    :map_center_lon,
+    :map_default_zoom,
+    :session_cookie_days,
+    :created_by
+)'
         );
 
         $stmt->execute([
@@ -122,6 +126,8 @@ final class GameRepository
             'slug' => $data['slug'],
             'description' => $data['description'],
             'intro_text' => $data['intro_text'],
+            'objective_text' => $data['objective_text'],
+            'player_guide_text' => $data['player_guide_text'],
             'starts_at' => $data['starts_at'],
             'ends_at' => $data['ends_at'],
             'registration_enabled' => $data['registration_enabled'],

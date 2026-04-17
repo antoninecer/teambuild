@@ -43,15 +43,15 @@ require __DIR__ . '/../partials/header.php';
             <textarea id="intro_text" name="intro_text"><?= htmlspecialchars($old['intro_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
         </div>
 
-        <div class="form-group">
-    <label for="objective_text">Cíl hry</label>
-    <textarea id="objective_text" name="objective_text" rows="4"><?= htmlspecialchars($_POST['objective_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
-</div>
+        <div class="form-group full-width">
+            <label for="objective_text">Cíl hry</label>
+            <textarea id="objective_text" name="objective_text" rows="4"><?= htmlspecialchars($old['objective_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+        </div>
 
-<div class="form-group">
-    <label for="player_guide_text">Návod pro hráče</label>
-    <textarea id="player_guide_text" name="player_guide_text" rows="8"><?= htmlspecialchars($_POST['player_guide_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
-</div>
+        <div class="form-group full-width">
+            <label for="player_guide_text">Návod pro hráče</label>
+            <textarea id="player_guide_text" name="player_guide_text" rows="8"><?= htmlspecialchars($old['player_guide_text'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+        </div>
 
         <div class="form-group">
             <label for="starts_at">Začátek hry*</label>

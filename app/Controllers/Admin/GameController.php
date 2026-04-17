@@ -55,6 +55,8 @@ final class GameController
         $slug = trim($_POST['slug'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $introText = trim($_POST['intro_text'] ?? '');
+        $objectiveText = trim($_POST['objective_text'] ?? '');
+        $playerGuideText = trim($_POST['player_guide_text'] ?? '');
         $startsAt = trim($_POST['starts_at'] ?? '');
         $endsAt = trim($_POST['ends_at'] ?? '');
         $status = trim($_POST['status'] ?? 'draft');
@@ -133,6 +135,8 @@ final class GameController
             'slug' => $slug,
             'description' => $description !== '' ? $description : null,
             'intro_text' => $introText !== '' ? $introText : null,
+            'objective_text' => $objectiveText !== '' ? $objectiveText : null,
+            'player_guide_text' => $playerGuideText !== '' ? $playerGuideText : null,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'registration_enabled' => $registrationEnabled,
