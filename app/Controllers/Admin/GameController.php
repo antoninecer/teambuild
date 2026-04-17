@@ -165,6 +165,73 @@ final class GameController
         require __DIR__ . '/../../../resources/views/admin/games/show.php';
     }
 
+public function editForm(int $id): void
+{
+    $this->requireAdmin();
+
+    $gameRepo = new \App\Repositories\GameRepository();
+    $game = $gameRepo->findById($id);
+
+    if (!$game) {
+        http_response_code(404);
+        echo 'Hra nebyla nalezena.';
+        exit;
+    }
+
+    require __DIR__ . '/../../../resources/views/admin/games/edit.php';
+}
+
+public function update(int $id): void
+{
+    $this->requireAdmin();
+
+    $gameRepo = new \App\Repositories\GameRepository();
+    $game = $gameRepo->findById($id);
+
+    if (!$game) {
+        http_response_code(404);
+        echo 'Hra nebyla nalezena.';
+        exit;
+    }
+
+    $name = trim((string)($_POST['name'] ?? ''));
+    $slug = trim((string)($_POST['slug'] ?? ''));
+    $description = trim((string)($_POST['description'] ?? ''));
+    $introText = trim((string)($_POST['intro_text'] ?? ''));
+    $objectiveText = trim((string)($_POST['objective_text'] ?? ''));
+    $playerGuideText = trim((string)($_POST['player_guide_text'] ?? ''));
+    $status = trim((string)($_POST['status'] ?? 'draft'));
+    $operationMode = trim((string)($_POST['operation_mode'] ?? 'self_service'));
+    $startsAt = trim((string)($_POST['starts_at'] ?? ''));
+    $endsAt = trim((string)($_POST['ends_at'] ?? ''));
+    $registrationEnabled = (int)($_POST['registration_enabled'] ?? 0);
+    $sessionCookieDays = (int)($_POST['session_cookie_days'] ?? 365);
+
+    if ($name === '' || $slug === '') {
+        http_response_code(422);
+        echo 'Název hry a slug musí být vyplněny.';
+        exit;
+    }
+
+    $gameRepo->update($id, [
+        'name' => $name,
+        'slug' => $slug,
+        'description' => $description,
+        'intro_text' => $introText,
+        'objective_text' => $objectiveText,
+        'player_guide_text' => $playerGuideText,
+        'status' => $status,
+        'operation_mode' => $operationMode,
+        'starts_at' => $startsAt !== '' ? $startsAt : null,
+        'ends_at' => $endsAt !== '' ? $endsAt : null,
+        'registration_enabled' => $registrationEnabled,
+        'session_cookie_days' => $sessionCookieDays,
+    ]);
+
+    header('Location: /admin/games/' . $id);
+    exit;
+}
+
     public function playerDetail(int $playerId): void
 {
     $this->requireAdmin();

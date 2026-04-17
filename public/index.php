@@ -94,6 +94,11 @@ if ($method === 'GET' && $uri === '/admin/api/header-status') {
     exit;
 }
 
+if ($method === 'GET' && preg_match('#^/admin/games/(\d+)/edit$#', $uri, $matches)) {
+    (new GameController())->editForm((int) $matches[1]);
+    exit;
+}
+
 if ($method === 'POST' && preg_match('#^/admin/api/help/(\d+)/acknowledge$#', $uri, $matches)) {
     (new \App\Controllers\Admin\DashboardController())->acknowledgeHelp((int) $matches[1]);
     exit;
@@ -173,6 +178,11 @@ if ($method === 'POST' && preg_match('#^/admin/pois/(\d+)$#', $uri, $matches)) {
 
 if ($method === 'POST' && preg_match('#^/admin/pois/(\d+)/delete$#', $uri, $matches)) {
     (new PoiController())->delete((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'POST' && preg_match('#^/admin/games/(\d+)$#', $uri, $matches)) {
+    (new GameController())->update((int) $matches[1]);
     exit;
 }
 

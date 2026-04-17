@@ -103,6 +103,7 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
 
 <div class="page-actions" style="margin-bottom: 24px;">
     <a class="btn btn-secondary" href="/admin/games">← Zpět na seznam</a>
+    <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/edit">Upravit</a>
     <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/pois">Správa bodů (POI)</a>
     <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/treasures">Poklady</a>
     <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/invites">Pozvánky & QR</a>
@@ -132,8 +133,10 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
             ,
             <?= $game['map_center_lon'] !== null ? htmlspecialchars((string) $game['map_center_lon'], ENT_QUOTES, 'UTF-8') : '-' ?>
         </dd>
-        <dt>Intro</dt><dd><?= nl2br(htmlspecialchars((string) $game['intro_text'], ENT_QUOTES, 'UTF-8')) ?></dd>
         <dt>Popis</dt><dd><?= nl2br(htmlspecialchars((string) $game['description'], ENT_QUOTES, 'UTF-8')) ?></dd>
+        <dt>Intro</dt><dd><?= nl2br(htmlspecialchars((string) $game['intro_text'], ENT_QUOTES, 'UTF-8')) ?></dd>
+        <dt>Cíl hry</dt><dd><?= nl2br(htmlspecialchars((string) ($game['objective_text'] ?? ''), ENT_QUOTES, 'UTF-8')) ?></dd>
+        <dt>Návod pro hráče</dt><dd><?= nl2br(htmlspecialchars((string) ($game['player_guide_text'] ?? ''), ENT_QUOTES, 'UTF-8')) ?></dd>
     </dl>
 </div>
 
