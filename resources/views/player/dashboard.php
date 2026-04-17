@@ -432,6 +432,62 @@
                 font-size: 13px;
             }
         }
+        .player-help-panels {
+    margin-top: 18px;
+    display: grid;
+    gap: 12px;
+}
+
+.player-help-card {
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(80,60,35,0.12);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.player-help-card summary {
+    cursor: pointer;
+    padding: 14px 16px;
+    font-weight: 700;
+    font-size: 16px;
+    list-style: none;
+    user-select: none;
+}
+
+.player-help-card summary::-webkit-details-marker {
+    display: none;
+}
+
+.player-help-card[open] summary {
+    border-bottom: 1px solid rgba(80,60,35,0.10);
+}
+
+.help-section {
+    padding: 14px 16px 16px;
+}
+
+.help-block + .help-block {
+    margin-top: 14px;
+}
+
+.help-block h3 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: rgba(30,25,20,0.9);
+}
+
+.help-block p,
+.help-block li {
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(20,20,20,0.82);
+}
+
+.help-block ul,
+.help-block ol {
+    margin: 8px 0 0 18px;
+    padding: 0;
+}
     </style>
 </head>
 <body>
@@ -511,7 +567,47 @@
                 <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="openHelpFromPlayerCard()">SOS / Pomoc</button>
                 <button class="modal-btn" style="background:#eee;" onclick="closePlayerCard()">Zavřít</button>
             </div>
+
+<div class="player-help-panels">
+    <details class="player-help-card">
+        <summary>Jak se hraje</summary>
+        <div class="help-section">
+            <?php require __DIR__ . '/partials/general_help.php'; ?>
         </div>
+    </details>
+
+    <details class="player-help-card">
+        <summary>O této hře</summary>
+        <div class="help-section">
+            <?php if (!empty($game['intro_text'])): ?>
+                <div class="help-block">
+                    <h3>Úvod</h3>
+                    <p><?= nl2br(htmlspecialchars($game['intro_text'], ENT_QUOTES, 'UTF-8')) ?></p>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($game['objective_text'])): ?>
+                <div class="help-block">
+                    <h3>Cíl hry</h3>
+                    <p><?= nl2br(htmlspecialchars($game['objective_text'], ENT_QUOTES, 'UTF-8')) ?></p>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($game['player_guide_text'])): ?>
+                <div class="help-block">
+                    <h3>Další instrukce</h3>
+                    <p><?= nl2br(htmlspecialchars($game['player_guide_text'], ENT_QUOTES, 'UTF-8')) ?></p>
+                </div>
+            <?php endif; ?>
+
+            <?php if (empty($game['intro_text']) && empty($game['objective_text']) && empty($game['player_guide_text'])): ?>
+                <div class="help-block">
+                    <p>Tato hra zatím nemá vyplněný vlastní briefing.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </details>
+</div>
     </div>
 
     <div id="resultsModal" class="modal">
