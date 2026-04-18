@@ -35,6 +35,34 @@ final class DashboardController
         return $userRepo->findAccessibleGameIdsForUser((int) $adminUser['id']);
     }
 
+    private function requireHelpAccess(int $helpId): array
+    {
+        $adminUser = $this->requireAdmin();
+
+        if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+            return $adminUser;
+        }
+
+        $repo = new HelpRepository();
+        $help = $repo->findById($helpId);
+
+        if (!$help) {
+            http_response_code(404);
+            echo 'SOS požadavek nebyl nalezen.';
+            exit;
+        }
+
+        $userRepo = new UserRepository();
+
+        if (!$userRepo->hasGameAccess((int) $adminUser['id'], (int) $help['game_id'])) {
+            http_response_code(403);
+            echo 'Na tento SOS požadavek nemáte oprávnění.';
+            exit;
+        }
+
+        return $adminUser;
+    }
+
     public function index(): void
     {
         $adminUser = $this->requireAdmin();
@@ -217,7 +245,7 @@ final class DashboardController
 
     public function acknowledgeHelp(int $helpId): void
     {
-        $this->requireAdmin();
+        $this->requireHelpAccess($helpId);
         header('Content-Type: application/json; charset=utf-8');
 
         $repo = new HelpRepository();
@@ -233,7 +261,7 @@ final class DashboardController
 
     public function resolveHelp(int $helpId): void
     {
-        $this->requireAdmin();
+        $this->requireHelpAccess($helpId);
         header('Content-Type: application/json; charset=utf-8');
 
         $repo = new HelpRepository();

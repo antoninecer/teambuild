@@ -7,6 +7,7 @@
 
         const endpoint = root.dataset.endpoint || '/admin/api/header-status';
         const pollIntervalMs = Number(root.dataset.pollMs || 10000);
+        const reminderIntervalMs = 30000;
         const titleBase = document.title;
         const panel = document.getElementById('admin-alerts-panel');
         const feed = document.getElementById('admin-alerts-feed');
@@ -29,6 +30,8 @@
 
         let lastOpenSosCount = null;
         let seenEventIds = new Set();
+        let sosReminderTimer = null;
+        let remindedCriticalHelpId = null;
 
         function safePlay(audioEl) {
             if (!audioEl || !soundEnabledCheckbox || !soundEnabledCheckbox.checked) {
@@ -65,6 +68,42 @@
 
             titleBlinkState = false;
             document.title = titleBase;
+        }
+
+        function clearSosReminder() {
+            if (sosReminderTimer) {
+                window.clearTimeout(sosReminderTimer);
+                sosReminderTimer = null;
+            }
+            remindedCriticalHelpId = null;
+        }
+
+        function scheduleSosReminder(event) {
+            clearSosReminder();
+
+            if (!event || !event.help_id || event.status !== 'open') {
+                return;
+            }
+
+            const helpId = Number(event.help_id);
+            remindedCriticalHelpId = helpId;
+
+            sosReminderTimer = window.setTimeout(async function () {
+                if (!currentCriticalEvent || Number(currentCriticalEvent.help_id || 0) !== helpId || currentCriticalEvent.status !== 'open') {
+                    return;
+                }
+
+                safePlay(soundSos);
+                startTitleBlink('SOS!');
+
+                try {
+                    await fetchStatus();
+                } finally {
+                    if (currentCriticalEvent && Number(currentCriticalEvent.help_id || 0) === helpId && currentCriticalEvent.status === 'open') {
+                        scheduleSosReminder(currentCriticalEvent);
+                    }
+                }
+            }, reminderIntervalMs);
         }
 
         function formatTime(value) {
@@ -245,6 +284,7 @@
                     }
 
                     button.disabled = true;
+                    clearSosReminder();
                     await acknowledgeHelp(helpId);
 
                     if (playerId) {
@@ -268,6 +308,7 @@
                     }
 
                     button.disabled = true;
+                    clearSosReminder();
                     await resolveHelp(helpId);
                     await fetchStatus();
                 });
@@ -334,7 +375,9 @@
                 event.severity === 'critical' && (event.status === 'open' || !event.status)
             ) || null;
 
+            const previousCriticalHelpId = currentCriticalEvent ? Number(currentCriticalEvent.help_id || 0) : 0;
             currentCriticalEvent = latestCritical;
+            const currentCriticalHelpId = currentCriticalEvent ? Number(currentCriticalEvent.help_id || 0) : 0;
 
             if (latestCritical) {
                 criticalBanner.classList.add('is-visible');
@@ -342,6 +385,14 @@
                 criticalBanner.dataset.helpId = latestCritical.help_id ? String(latestCritical.help_id) : '';
                 criticalBanner.dataset.playerId = latestCritical.player_id ? String(latestCritical.player_id) : '';
                 criticalBanner.style.cursor = latestCritical.help_id ? 'pointer' : 'default';
+
+                if (latestCritical.status === 'open') {
+                    if (previousCriticalHelpId !== currentCriticalHelpId || remindedCriticalHelpId !== currentCriticalHelpId) {
+                        scheduleSosReminder(latestCritical);
+                    }
+                } else {
+                    clearSosReminder();
+                }
             } else {
                 currentCriticalEvent = null;
                 criticalBanner.classList.remove('is-visible');
@@ -349,6 +400,7 @@
                 criticalBanner.dataset.helpId = '';
                 criticalBanner.dataset.playerId = '';
                 criticalBanner.style.cursor = 'default';
+                clearSosReminder();
                 stopTitleBlink();
             }
 
@@ -403,6 +455,7 @@
 
         criticalBanner.addEventListener('click', async function () {
             if (currentCriticalEvent && currentCriticalEvent.help_id && currentCriticalEvent.status === 'open') {
+                clearSosReminder();
                 await handleSosAcknowledge(currentCriticalEvent);
                 return;
             }
@@ -415,6 +468,7 @@
                 event.preventDefault();
 
                 if (currentCriticalEvent && currentCriticalEvent.help_id && currentCriticalEvent.status === 'open') {
+                    clearSosReminder();
                     await handleSosAcknowledge(currentCriticalEvent);
                     return;
                 }
