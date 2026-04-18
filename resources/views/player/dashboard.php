@@ -688,8 +688,10 @@
             <div id="poiMedia" class="poi-media"></div>
             <div id="poiText" class="poi-text"></div>
             <div class="modal-btns">
-                <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="speakCurrentText()">PŘEČÍST NAHLAS</button>
-                <button class="modal-btn" style="background:#757575; color:#fff;" onclick="stopSpeech()">ZASTAVIT</button>
+                <button id="speechPlayBtn" class="modal-btn" style="background:#1976d2; color:#fff;" onclick="speakCurrentText()">PŘEČÍST NAHLAS</button>
+<button id="speechPauseBtn" class="modal-btn" style="background:#f57c00; color:#fff; display:none;" onclick="pauseSpeech()">POZASTAVIT</button>
+<button id="speechResumeBtn" class="modal-btn" style="background:#388e3c; color:#fff; display:none;" onclick="resumeSpeech()">POKRAČOVAT</button>
+<button id="speechStopBtn" class="modal-btn" style="background:#757575; color:#fff; display:none;" onclick="stopSpeech()">ZASTAVIT</button>
                 <button id="completePoiBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="completeCurrentPoi()">POTVRDIT PRŮZKUM</button>
                 <button id="claimBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="claimCurrentTreasure()">SEBRAT POKLAD</button>
                 <button class="modal-btn" style="background:#eee;" onclick="closePoiModal()">ZAVŘÍT</button>
