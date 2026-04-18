@@ -25,9 +25,28 @@ final class PoiController
         return $_SESSION['admin_user'];
     }
 
+    private function requireGameAccess(int $gameId): array
+    {
+        $adminUser = $this->requireAdmin();
+
+        if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+            return $adminUser;
+        }
+
+        $userRepo = new \App\Repositories\UserRepository();
+
+        if (!$userRepo->hasGameAccess((int) $adminUser['id'], $gameId)) {
+            http_response_code(403);
+            echo 'Na tuto hru nemáte oprávnění.';
+            exit;
+        }
+
+        return $adminUser;
+    }
+
     public function index(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -46,7 +65,7 @@ final class PoiController
 
     public function createForm(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -69,7 +88,7 @@ final class PoiController
 
     public function store(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -170,6 +189,8 @@ final class PoiController
             exit;
         }
 
+        $this->requireGameAccess((int) $poi['game_id']);
+
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById((int) $poi['game_id']);
 
@@ -196,6 +217,8 @@ final class PoiController
             echo 'POI nebyl nalezen.';
             exit;
         }
+
+        $this->requireGameAccess((int) $poi['game_id']);
 
         $name = trim($_POST['name'] ?? '');
         $type = trim($_POST['type'] ?? '');
@@ -285,10 +308,162 @@ final class PoiController
             exit;
         }
 
+        $this->requireGameAccess((int) $poi['game_id']);
+
+        $gameId = (int) $poi['game_id'];
         $poiRepo->delete($id);
 
-        header('Location: /admin/games/' . $poi['game_id'] . '/pois');
+        header('Location: /admin/games/' . $gameId . '/pois');
         exit;
+    }
+
+    private function validateMediaInput(array $mediaInput, array $files): array
+    {
+        $errors = [];
+
+        foreach ($mediaInput as $index => $row) {
+            $type = trim((string) ($row['media_type'] ?? ''));
+            $label = trim((string) ($row['label'] ?? ''));
+            $externalUrl = trim((string) ($row['external_url'] ?? ''));
+            $existingPath = trim((string) ($row['existing_path'] ?? ''));
+            $sortOrder = trim((string) ($row['sort_order'] ?? '0'));
+
+            $fileError = $files['media']['error'][$index]['upload'] ?? UPLOAD_ERR_NO_FILE;
+            $hasNewUpload = $fileError !== UPLOAD_ERR_NO_FILE;
+            $hasExistingPath = $existingPath !== '';
+            $hasExternalUrl = $externalUrl !== '';
+            $hasAnySource = $hasNewUpload || $hasExistingPath || $hasExternalUrl;
+
+            if ($type === '' && $label === '' && !$hasAnySource) {
+                continue;
+            }
+
+            if ($type === '') {
+                $errors[] = 'U média je povinný typ.';
+                continue;
+            }
+
+            if (!in_array($type, ['image', 'video', 'audio'], true)) {
+                $errors[] = 'Neplatný typ média.';
+                continue;
+            }
+
+            if (!is_numeric($sortOrder)) {
+                $errors[] = 'Pořadí média musí být číslo.';
+            }
+
+            if (($hasNewUpload && $hasExternalUrl) || ($hasExistingPath !== false && $hasExistingPath && $hasExternalUrl)) {
+                $errors[] = 'U jednoho média použij buď soubor, nebo externí URL.';
+            }
+
+            if (!$hasAnySource) {
+                $errors[] = 'U média je potřeba nahrát soubor nebo zadat externí URL.';
+                continue;
+            }
+
+            if ($hasExternalUrl && filter_var($externalUrl, FILTER_VALIDATE_URL) === false) {
+                $errors[] = 'Externí URL média není platná.';
+            }
+
+            if ($hasNewUpload && $fileError !== UPLOAD_ERR_OK) {
+                $errors[] = 'Nahrání média selhalo.';
+                continue;
+            }
+
+            if ($hasNewUpload) {
+                $tmpName = $files['media']['tmp_name'][$index]['upload'] ?? null;
+                if (!$tmpName || !is_uploaded_file($tmpName)) {
+                    $errors[] = 'Dočasný soubor média nebyl nalezen.';
+                    continue;
+                }
+
+                $detectedMime = mime_content_type($tmpName) ?: '';
+                $allowedMimes = [
+                    'image' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+                    'video' => ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
+                    'audio' => ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/webm'],
+                ];
+
+                if (!in_array($detectedMime, $allowedMimes[$type] ?? [], true)) {
+                    $errors[] = 'Soubor média neodpovídá zvolenému typu.';
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    private function replaceMedia(int $gameId, int $poiId, array $mediaInput, array $files): void
+    {
+        $pdo = Database::connection();
+        $pdo->prepare('DELETE FROM poi_media WHERE poi_id = :poi_id')->execute(['poi_id' => $poiId]);
+
+        $insertStmt = $pdo->prepare(
+            'INSERT INTO poi_media (poi_id, media_type, file_path, external_url, mime_type, label, sort_order, created_at)
+             VALUES (:poi_id, :media_type, :file_path, :external_url, :mime_type, :label, :sort_order, NOW())'
+        );
+
+        foreach ($mediaInput as $index => $row) {
+            $type = trim((string) ($row['media_type'] ?? ''));
+            $label = trim((string) ($row['label'] ?? ''));
+            $externalUrl = trim((string) ($row['external_url'] ?? ''));
+            $existingPath = trim((string) ($row['existing_path'] ?? ''));
+            $sortOrder = (int) ($row['sort_order'] ?? 0);
+
+            $fileError = $files['media']['error'][$index]['upload'] ?? UPLOAD_ERR_NO_FILE;
+            $hasNewUpload = $fileError !== UPLOAD_ERR_NO_FILE;
+            $filePath = null;
+            $mimeType = null;
+
+            if ($type === '' && $label === '' && $externalUrl === '' && !$hasNewUpload && $existingPath === '') {
+                continue;
+            }
+
+            if ($externalUrl === '' && !$hasNewUpload && $existingPath === '') {
+                continue;
+            }
+
+            if ($hasNewUpload) {
+                $tmpName = $files['media']['tmp_name'][$index]['upload'];
+                $originalName = (string) ($files['media']['name'][$index]['upload'] ?? 'file');
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                $safeExtension = preg_replace('~[^a-z0-9]+~', '', $extension) ?: 'bin';
+                $fileName = sprintf(
+                    'poi_%d_%d_%s.%s',
+                    $poiId,
+                    $sortOrder,
+                    bin2hex(random_bytes(4)),
+                    $safeExtension
+                );
+
+                $targetDir = dirname(__DIR__, 3) . '/public/uploads/games/' . $gameId . '/poi';
+                if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+                    throw new RuntimeException('Nepodařilo se vytvořit adresář pro média.');
+                }
+
+                $targetPath = $targetDir . '/' . $fileName;
+
+                if (!move_uploaded_file($tmpName, $targetPath)) {
+                    throw new RuntimeException('Nepodařilo se uložit nahrané médium.');
+                }
+
+                $filePath = '/uploads/games/' . $gameId . '/poi/' . $fileName;
+                $mimeType = mime_content_type($targetPath) ?: null;
+            } elseif ($existingPath !== '') {
+                $filePath = $existingPath;
+            }
+
+            $insertStmt->execute([
+                'poi_id' => $poiId,
+                'media_type' => $type,
+                'file_path' => $filePath,
+                'external_url' => $externalUrl !== '' ? $externalUrl : null,
+                'mime_type' => $mimeType,
+                'label' => $label !== '' ? $label : null,
+                'sort_order' => $sortOrder,
+            ]);
+        }
     }
 
     private function loadPoiMedia(int $poiId): array
@@ -296,7 +471,7 @@ final class PoiController
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'SELECT *
+            'SELECT id, media_type, file_path, external_url, mime_type, label, sort_order
              FROM poi_media
              WHERE poi_id = :poi_id
              ORDER BY sort_order ASC, id ASC'
@@ -305,170 +480,5 @@ final class PoiController
         $stmt->execute(['poi_id' => $poiId]);
 
         return $stmt->fetchAll();
-    }
-
-    private function validateMediaInput(array $mediaRows, array $files): array
-    {
-        $errors = [];
-
-        foreach ($mediaRows as $index => $row) {
-            $type = trim((string) ($row['media_type'] ?? 'image'));
-            $path = trim((string) ($row['file_path'] ?? ''));
-            $fileKey = 'media_file_' . $index;
-            $hasUpload = isset($files[$fileKey]) && (int) ($files[$fileKey]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
-
-            if ($type !== 'image' && $type !== 'video') {
-                $errors[] = 'Neplatný typ média na řádku ' . ((int) $index + 1) . '.';
-                continue;
-            }
-
-            if ($path === '' && !$hasUpload) {
-                continue;
-            }
-
-            if ($type === 'video' && $hasUpload) {
-                $errors[] = 'Na řádku ' . ((int) $index + 1) . ' nelze nahrávat soubor pro video. Použij YouTube URL.';
-            }
-
-            if ($type === 'video' && $path !== '' && !$this->isYoutubeUrl($path)) {
-                $errors[] = 'Na řádku ' . ((int) $index + 1) . ' je neplatná YouTube URL.';
-            }
-
-            if ($hasUpload) {
-                $uploadError = (int) $files[$fileKey]['error'];
-                if ($uploadError !== UPLOAD_ERR_OK) {
-                    $errors[] = 'Upload na řádku ' . ((int) $index + 1) . ' selhal.';
-                    continue;
-                }
-
-                $size = (int) ($files[$fileKey]['size'] ?? 0);
-                if ($size <= 0 || $size > 5 * 1024 * 1024) {
-                    $errors[] = 'Soubor na řádku ' . ((int) $index + 1) . ' musí mít maximálně 5 MB.';
-                }
-
-                try {
-                    $this->detectAllowedImageExtension($files[$fileKey]['tmp_name'], (string) $files[$fileKey]['name']);
-                } catch (RuntimeException $e) {
-                    $errors[] = 'Soubor na řádku ' . ((int) $index + 1) . ': ' . $e->getMessage();
-                }
-            }
-        }
-
-        return $errors;
-    }
-
-    private function replaceMedia(int $gameId, int $poiId, array $mediaRows, array $files): void
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare('DELETE FROM poi_media WHERE poi_id = :poi_id');
-        $stmt->execute(['poi_id' => $poiId]);
-
-        foreach ($mediaRows as $index => $row) {
-            $type = trim((string) ($row['media_type'] ?? 'image'));
-            $path = trim((string) ($row['file_path'] ?? ''));
-            $title = trim((string) ($row['title'] ?? ''));
-            $sortOrder = (int) ($row['sort_order'] ?? 0);
-            $fileKey = 'media_file_' . $index;
-
-            $hasUpload = isset($files[$fileKey]) && (int) ($files[$fileKey]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
-
-            if ($path === '' && !$hasUpload) {
-                continue;
-            }
-
-            if ($type === 'video') {
-                if ($path !== '' && $this->isYoutubeUrl($path)) {
-                    $this->insertPoiMedia($poiId, 'video', $path, $title !== '' ? $title : null, $sortOrder);
-                }
-                continue;
-            }
-
-            if ($path !== '') {
-                $this->insertPoiMedia($poiId, 'image', $path, $title !== '' ? $title : null, $sortOrder);
-            }
-
-            if ($hasUpload) {
-                $storedPath = $this->storeUploadedImage($gameId, $poiId, $files[$fileKey]);
-                $this->insertPoiMedia($poiId, 'image', $storedPath, $title !== '' ? $title : null, $sortOrder);
-            }
-        }
-    }
-
-    private function insertPoiMedia(int $poiId, string $mediaType, string $filePath, ?string $title, int $sortOrder): void
-    {
-        $pdo = Database::connection();
-
-        $stmt = $pdo->prepare(
-            'INSERT INTO poi_media (poi_id, media_type, file_path, title, alt_text, sort_order, autoplay, created_at)
-             VALUES (:poi_id, :media_type, :file_path, :title, :alt_text, :sort_order, 0, NOW())'
-        );
-
-        $stmt->execute([
-            'poi_id' => $poiId,
-            'media_type' => $mediaType,
-            'file_path' => $filePath,
-            'title' => $title,
-            'alt_text' => $title,
-            'sort_order' => $sortOrder,
-        ]);
-    }
-
-    private function storeUploadedImage(int $gameId, int $poiId, array $file): string
-    {
-        $extension = $this->detectAllowedImageExtension((string) $file['tmp_name'], (string) $file['name']);
-
-        $baseDir = dirname(__DIR__, 3) . '/public/uploads/games/' . $gameId . '/pois/' . $poiId;
-        if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
-            throw new RuntimeException('Nepodařilo se vytvořit adresář pro upload.');
-        }
-
-        $filename = 'img-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
-        $targetPath = $baseDir . '/' . $filename;
-
-        if (!move_uploaded_file((string) $file['tmp_name'], $targetPath)) {
-            throw new RuntimeException('Nepodařilo se uložit nahraný soubor.');
-        }
-
-        return '/uploads/games/' . $gameId . '/pois/' . $poiId . '/' . $filename;
-    }
-
-    private function detectAllowedImageExtension(string $tmpPath, string $originalName): string
-    {
-        $mime = @mime_content_type($tmpPath) ?: '';
-        $ext = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
-
-        $allowedByMime = [
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-        ];
-
-        if (isset($allowedByMime[$mime])) {
-            return $allowedByMime[$mime];
-        }
-
-        $allowedByExt = ['jpg', 'jpeg', 'png', 'webp'];
-        if (in_array($ext, $allowedByExt, true)) {
-            return $ext === 'jpeg' ? 'jpg' : $ext;
-        }
-
-        throw new RuntimeException('Povolené jsou pouze JPG, PNG nebo WEBP.');
-    }
-
-    private function isYoutubeUrl(string $url): bool
-    {
-        if ($url === '') {
-            return false;
-        }
-
-        $host = parse_url($url, PHP_URL_HOST);
-        if (!is_string($host) || $host === '') {
-            return false;
-        }
-
-        $host = strtolower($host);
-
-        return str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be');
     }
 }

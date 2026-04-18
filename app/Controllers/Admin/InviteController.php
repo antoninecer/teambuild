@@ -24,9 +24,28 @@ final class InviteController
         return $_SESSION['admin_user'];
     }
 
+    private function requireGameAccess(int $gameId): array
+    {
+        $adminUser = $this->requireAdmin();
+
+        if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+            return $adminUser;
+        }
+
+        $userRepo = new \App\Repositories\UserRepository();
+
+        if (!$userRepo->hasGameAccess((int) $adminUser['id'], $gameId)) {
+            http_response_code(403);
+            echo 'Na tuto hru nemáte oprávnění.';
+            exit;
+        }
+
+        return $adminUser;
+    }
+
     public function index(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -45,7 +64,7 @@ final class InviteController
 
     public function createForm(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -69,7 +88,7 @@ final class InviteController
 
     public function store(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -133,6 +152,8 @@ final class InviteController
             echo 'Pozvánka nebyla nalezena.';
             exit;
         }
+
+        $this->requireGameAccess((int) $invite['game_id']);
 
         $inviteRepo->delete($id);
 

@@ -24,9 +24,28 @@ final class TreasureController
         return $_SESSION['admin_user'];
     }
 
+    private function requireGameAccess(int $gameId): array
+    {
+        $adminUser = $this->requireAdmin();
+
+        if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+            return $adminUser;
+        }
+
+        $userRepo = new \App\Repositories\UserRepository();
+
+        if (!$userRepo->hasGameAccess((int) $adminUser['id'], $gameId)) {
+            http_response_code(403);
+            echo 'Na tuto hru nemáte oprávnění.';
+            exit;
+        }
+
+        return $adminUser;
+    }
+
     public function index(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $treasureRepo = new TreasureRepository();
@@ -46,7 +65,7 @@ final class TreasureController
 
     public function createForm(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $poiRepo = new PoiRepository();
@@ -70,7 +89,7 @@ final class TreasureController
 
     public function store(int $gameId): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($gameId);
 
         $gameRepo = new GameRepository();
         $game = $gameRepo->findById($gameId);
@@ -114,6 +133,8 @@ final class TreasureController
             exit;
         }
 
+        $this->requireGameAccess((int) $treasure['game_id']);
+
         $game = $gameRepo->findById((int) $treasure['game_id']);
 
         if (!$game) {
@@ -144,6 +165,8 @@ final class TreasureController
             exit;
         }
 
+        $this->requireGameAccess((int) $treasure['game_id']);
+
         [$data, $errors] = $this->validateTreasureInput($_POST);
 
         if ($errors !== []) {
@@ -171,6 +194,8 @@ final class TreasureController
             echo 'Poklad nebyl nalezen.';
             exit;
         }
+
+        $this->requireGameAccess((int) $treasure['game_id']);
 
         $gameId = (int) $treasure['game_id'];
         $repo->delete($treasureId);
