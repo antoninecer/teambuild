@@ -60,6 +60,28 @@ final class TreasureRepository
             WHERE t.game_id = :game_id
               AND t.is_enabled = 1
               AND t.is_visible_on_map = 1
+              AND (
+                    (
+                        t.treasure_type = \'public\'
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM treasure_claims tc_public
+                            WHERE tc_public.treasure_id = t.id
+                        )
+                    )
+                    OR
+                    (
+                        t.treasure_type <> \'public\'
+                        AND (
+                            t.max_claims IS NULL
+                            OR (
+                                SELECT COUNT(*)
+                                FROM treasure_claims tc_limit
+                                WHERE tc_limit.treasure_id = t.id
+                            ) < t.max_claims
+                        )
+                    )
+                  )
             ORDER BY t.id ASC
         ';
 
@@ -248,6 +270,23 @@ final class TreasureRepository
             }
 
             $stmt = $pdo->prepare(
+                'SELECT COUNT(*) AS cnt
+                 FROM treasure_claims
+                 WHERE treasure_id = :treasure_id'
+            );
+            $stmt->execute(['treasure_id' => $treasureId]);
+            $countRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            $claimCount = (int) ($countRow['cnt'] ?? 0);
+
+            if (($treasure['treasure_type'] ?? '') === 'public' && $claimCount > 0) {
+                $pdo->rollBack();
+                return [
+                    'success' => false,
+                    'status' => 'empty',
+                ];
+            }
+
+            $stmt = $pdo->prepare(
                 'SELECT 1
                  FROM treasure_claims
                  WHERE treasure_id = :treasure_id
@@ -290,15 +329,6 @@ final class TreasureRepository
             }
 
             if ($treasure['max_claims'] !== null) {
-                $stmt = $pdo->prepare(
-                    'SELECT COUNT(*) AS cnt
-                     FROM treasure_claims
-                     WHERE treasure_id = :treasure_id'
-                );
-                $stmt->execute(['treasure_id' => $treasureId]);
-                $countRow = $stmt->fetch(PDO::FETCH_ASSOC);
-                $claimCount = (int) ($countRow['cnt'] ?? 0);
-
                 if ($claimCount >= (int) $treasure['max_claims']) {
                     $pdo->rollBack();
                     return [
