@@ -609,6 +609,7 @@
     </details>
 </div>
     </div>
+</div>
 
     <div id="resultsModal" class="modal">
         <div class="modal-content glass-modal">
