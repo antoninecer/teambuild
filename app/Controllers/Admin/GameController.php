@@ -25,6 +25,25 @@ final class GameController
         return $_SESSION['admin_user'];
     }
 
+    private function requireGameAccess(int $gameId): array
+{
+    $adminUser = $this->requireAdmin();
+
+    if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+        return $adminUser;
+    }
+
+    $userRepo = new \App\Repositories\UserRepository();
+
+    if (!$userRepo->hasGameAccess((int) $adminUser['id'], $gameId)) {
+        http_response_code(403);
+        echo 'Na tuto hru nemáte oprávnění.';
+        exit;
+    }
+
+    return $adminUser;
+}
+
 public function index(): void
 {
     $adminUser = $this->requireAdmin();
@@ -331,7 +350,8 @@ public function update(int $id): void
     exit;
 }
 
-    public function playerDetail(int $playerId): void
+
+public function playerDetail(int $playerId): void
 {
     $this->requireAdmin();
 
@@ -344,12 +364,19 @@ public function update(int $id): void
         exit;
     }
 
+    $this->requireGameAccess((int) $player['game_id']);
+
     $gameRepo = new GameRepository();
     $game = $gameRepo->findById((int) $player['game_id']);
 
+    if (!$game) {
+        http_response_code(404);
+        echo 'Hra nebyla nalezena.';
+        exit;
+    }
+
     $pdo = Database::connection();
 
-    // Treasures found
     $treasuresStmt = $pdo->prepare(
         'SELECT tc.*, t.name, t.points
          FROM treasure_claims tc
@@ -360,7 +387,6 @@ public function update(int $id): void
     $treasuresStmt->execute(['player_id' => $playerId]);
     $claimedTreasures = $treasuresStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Location history
     $locationStmt = $pdo->prepare(
         'SELECT *
          FROM location_log
@@ -371,10 +397,8 @@ public function update(int $id): void
     $locationStmt->execute(['player_id' => $playerId]);
     $locationHistory = $locationStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Last known position
     $lastKnownPosition = $locationHistory[0] ?? null;
 
-    // Active SOS for this player
     $helpStmt = $pdo->prepare(
         'SELECT *
          FROM help_requests
@@ -386,7 +410,6 @@ public function update(int $id): void
     $helpStmt->execute(['player_id' => $playerId]);
     $activeHelpRequest = $helpStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-    // Recent player events
     $eventsStmt = $pdo->prepare(
         'SELECT *
          FROM events
