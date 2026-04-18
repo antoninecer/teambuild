@@ -29,21 +29,31 @@ final class UserController
         return $_SESSION['admin_user'];
     }
 
-    public function index(): void
+    private function requireSuperadmin(): array
     {
         $adminUser = $this->requireAdmin();
+
+        if (($adminUser['global_role'] ?? 'none') !== 'superadmin') {
+            http_response_code(403);
+            echo 'Tato akce je povolena jen superadminovi.';
+            exit;
+        }
+
+        return $adminUser;
+    }
+
+    public function index(): void
+    {
+        $adminUser = $this->requireSuperadmin();
 
         $users = $this->repo->allAdmins();
 
         require __DIR__ . '/../../../resources/views/admin/users/index.php';
     }
 
-    // =========================
-    // CREATE USER
-    // =========================
     public function create(): void
     {
-        $this->requireAdmin();
+        $this->requireSuperadmin();
 
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -70,12 +80,9 @@ final class UserController
         exit;
     }
 
-    // =========================
-    // ACTIVATE / DEACTIVATE
-    // =========================
     public function toggle(int $userId): void
     {
-        $this->requireAdmin();
+        $this->requireSuperadmin();
 
         $this->repo->toggleActive($userId);
 
@@ -83,12 +90,9 @@ final class UserController
         exit;
     }
 
-    // =========================
-    // CHANGE PASSWORD FORM
-    // =========================
     public function changePasswordForm(int $userId): void
     {
-        $this->requireAdmin();
+        $this->requireSuperadmin();
 
         $user = $this->repo->findById($userId);
 
@@ -100,12 +104,9 @@ final class UserController
         require __DIR__ . '/../../../resources/views/admin/users/password.php';
     }
 
-    // =========================
-    // CHANGE PASSWORD
-    // =========================
     public function changePassword(int $userId): void
     {
-        $this->requireAdmin();
+        $this->requireSuperadmin();
 
         $password = $_POST['password'] ?? '';
 

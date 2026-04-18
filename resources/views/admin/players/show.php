@@ -13,9 +13,19 @@ $activeNav = 'games';
 
 require __DIR__ . '/../partials/header.php';
 
-$mapsUrl = null;
+$mapsLat = null;
+$mapsLon = null;
 if (!empty($player['last_lat']) && !empty($player['last_lon'])) {
-    $mapsUrl = 'https://maps.google.com/?q=' . rawurlencode((string)$player['last_lat'] . ',' . (string)$player['last_lon']);
+    $mapsLat = (float) $player['last_lat'];
+    $mapsLon = (float) $player['last_lon'];
+} elseif ($lastKnownPosition) {
+    $mapsLat = (float) $lastKnownPosition['lat'];
+    $mapsLon = (float) $lastKnownPosition['lon'];
+}
+
+$mapsUrl = null;
+if ($mapsLat !== null && $mapsLon !== null) {
+    $mapsUrl = 'https://maps.google.com/?q=' . rawurlencode((string) $mapsLat . ',' . (string) $mapsLon);
 }
 
 $phoneLink = null;
@@ -117,6 +127,41 @@ function eventDetail(array $event): string
         color: #6d5a49;
         font-size: 13px;
     }
+
+    .map-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .map-title-row h3 {
+        margin: 0;
+    }
+
+    .map-subtitle {
+        color: #6d5a49;
+        font-size: 13px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+    }
+
+    .location-row {
+        cursor: pointer;
+    }
+
+    .location-row:hover {
+        background: #f8f1e7;
+    }
+
+    .location-row.is-selected {
+        background: #efe1ce;
+    }
+
+    .location-row.is-selected td {
+        font-weight: 600;
+    }
 </style>
 
 <div class="page-actions">
@@ -215,7 +260,7 @@ function eventDetail(array $event): string
 
             <?php if ($mapsUrl): ?>
                 <div class="small-actions">
-                    <a class="btn btn-secondary" href="<?= htmlspecialchars($mapsUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Otevřít poslední polohu v mapách</a>
+                    <a id="selected-location-link" class="btn btn-secondary" href="<?= htmlspecialchars($mapsUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Otevřít zobrazenou polohu v mapách</a>
                 </div>
             <?php endif; ?>
         </div>
@@ -280,7 +325,16 @@ function eventDetail(array $event): string
 
     <div>
         <div class="card">
-            <h3>Poslední známá poloha</h3>
+            <div class="map-title-row">
+                <h3 id="player-map-title">Poslední známá poloha</h3>
+            </div>
+            <div id="player-map-subtitle" class="map-subtitle">
+                <?php if ($lastKnownPosition): ?>
+                    Zobrazená poloha odpovídá poslednímu známému bodu hráče.
+                <?php else: ?>
+                    Zatím není k dispozici žádný bod polohy.
+                <?php endif; ?>
+            </div>
             <div id="map" style="height: 400px; border-radius: 12px; border: 1px solid var(--line); z-index: 1;"></div>
             <?php if (!$player['last_lat'] && !$lastKnownPosition): ?>
                  <p class="help" style="margin-top: 10px;">Poloha hráče zatím není známa.</p>
@@ -292,6 +346,7 @@ function eventDetail(array $event): string
             <?php if (empty($locationHistory)): ?>
                 <p class="help">Žádné záznamy o pohybu.</p>
             <?php else: ?>
+                <p class="mini-help" style="margin-bottom: 10px;">Kliknutím na řádek přesuneš mapu na vybraný bod a uvidíš stav hráče v daném čase.</p>
                 <div class="table-wrap" style="max-height: 300px; overflow-y: auto;">
                     <table>
                         <thead>
@@ -302,8 +357,12 @@ function eventDetail(array $event): string
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($locationHistory as $log): ?>
-                                <tr>
+                            <?php foreach ($locationHistory as $index => $log): ?>
+                                <tr class="location-row<?= $index === 0 ? ' is-selected' : '' ?>"
+                                    data-lat="<?= htmlspecialchars((string)$log['lat'], ENT_QUOTES, 'UTF-8') ?>"
+                                    data-lon="<?= htmlspecialchars((string)$log['lon'], ENT_QUOTES, 'UTF-8') ?>"
+                                    data-accuracy="<?= htmlspecialchars((string)$log['accuracy'], ENT_QUOTES, 'UTF-8') ?>"
+                                    data-created-at="<?= htmlspecialchars((string)$log['created_at'], ENT_QUOTES, 'UTF-8') ?>">
                                     <td style="font-size: 12px;"><?= htmlspecialchars((string)$log['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
                                     <td style="font-size: 12px; font-family: monospace;">
                                         <?= round((float)$log['lat'], 6) ?>, <?= round((float)$log['lon'], 6) ?>
@@ -364,47 +423,105 @@ function eventDetail(array $event): string
     }
 
     const playerLat = <?= $player['last_lat'] !== null ? (float)$player['last_lat'] : 'null' ?>;
-const playerLon = <?= $player['last_lon'] !== null ? (float)$player['last_lon'] : 'null' ?>;
+    const playerLon = <?= $player['last_lon'] !== null ? (float)$player['last_lon'] : 'null' ?>;
 
-const fallbackLat = <?= $lastKnownPosition ? (float)$lastKnownPosition['lat'] : 'null' ?>;
-const fallbackLon = <?= $lastKnownPosition ? (float)$lastKnownPosition['lon'] : 'null' ?>;
+    const fallbackLat = <?= $lastKnownPosition ? (float)$lastKnownPosition['lat'] : 'null' ?>;
+    const fallbackLon = <?= $lastKnownPosition ? (float)$lastKnownPosition['lon'] : 'null' ?>;
 
-const effectiveLat = playerLat !== null ? playerLat : fallbackLat;
-const effectiveLon = playerLon !== null ? playerLon : fallbackLon;
+    const effectiveLat = playerLat !== null ? playerLat : fallbackLat;
+    const effectiveLon = playerLon !== null ? playerLon : fallbackLon;
 
-const mapCenter = [
-    effectiveLat !== null ? effectiveLat : <?= (float)($game['map_center_lat'] ?? 50.0755) ?>,
-    effectiveLon !== null ? effectiveLon : <?= (float)($game['map_center_lon'] ?? 14.4378) ?>
-];
+    const mapCenter = [
+        effectiveLat !== null ? effectiveLat : <?= (float)($game['map_center_lat'] ?? 50.0755) ?>,
+        effectiveLon !== null ? effectiveLon : <?= (float)($game['map_center_lon'] ?? 14.4378) ?>
+    ];
 
-const map = L.map('map').setView(
-    mapCenter,
-    effectiveLat !== null && effectiveLon !== null ? 16 : <?= (int)($game['map_default_zoom'] ?? 14) ?>
-);
+    const map = L.map('map').setView(
+        mapCenter,
+        effectiveLat !== null && effectiveLon !== null ? 16 : <?= (int)($game['map_default_zoom'] ?? 14) ?>
+    );
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-<?php if (!empty($locationHistory)): ?>
-const pathPoints = [
-    <?php foreach (array_reverse($locationHistory) as $log): ?>
-        [<?= (float)$log['lat'] ?>, <?= (float)$log['lon'] ?>],
-    <?php endforeach; ?>
-];
-<?php else: ?>
-const pathPoints = [];
-<?php endif; ?>
+    <?php if (!empty($locationHistory)): ?>
+    const pathPoints = [
+        <?php foreach (array_reverse($locationHistory) as $log): ?>
+            [<?= (float)$log['lat'] ?>, <?= (float)$log['lon'] ?>],
+        <?php endforeach; ?>
+    ];
+    <?php else: ?>
+    const pathPoints = [];
+    <?php endif; ?>
 
-if (pathPoints.length > 0) {
-    L.polyline(pathPoints, { color: 'red', weight: 3, opacity: 0.5 }).addTo(map);
-}
+    let pathLine = null;
+    if (pathPoints.length > 0) {
+        pathLine = L.polyline(pathPoints, { color: 'red', weight: 3, opacity: 0.5 }).addTo(map);
+    }
 
-if (effectiveLat !== null && effectiveLon !== null) {
-    L.marker([effectiveLat, effectiveLon]).addTo(map)
-        .bindPopup("<?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?>")
-        .openPopup();
-}
+    let selectedMarker = null;
+
+    function mapsUrlFor(lat, lon) {
+        return `https://maps.google.com/?q=${encodeURIComponent(String(lat) + ',' + String(lon))}`;
+    }
+
+    function updateMapTexts(createdAt, accuracy, lat, lon) {
+        const titleEl = document.getElementById('player-map-title');
+        const subtitleEl = document.getElementById('player-map-subtitle');
+        const linkEl = document.getElementById('selected-location-link');
+
+        if (titleEl) {
+            titleEl.textContent = createdAt ? 'Poloha hráče k ' + createdAt : 'Poslední známá poloha';
+        }
+
+        if (subtitleEl) {
+            const accuracyText = accuracy !== null && accuracy !== '' ? `${Number(accuracy).toFixed(1)} m` : '-';
+            subtitleEl.textContent = `Souřadnice ${Number(lat).toFixed(6)}, ${Number(lon).toFixed(6)} | Přesnost ${accuracyText}`;
+        }
+
+        if (linkEl) {
+            linkEl.href = mapsUrlFor(lat, lon);
+        }
+    }
+
+    function focusLocation(lat, lon, createdAt, accuracy) {
+        if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+        }
+
+        selectedMarker = L.marker([lat, lon]).addTo(map);
+        selectedMarker
+            .bindPopup(
+                `<strong><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></strong><br>` +
+                `Poloha k: ${createdAt || 'neznámý čas'}<br>` +
+                `Přesnost: ${accuracy !== null && accuracy !== '' ? Number(accuracy).toFixed(1) + ' m' : '-'}`
+            )
+            .openPopup();
+
+        map.setView([lat, lon], Math.max(map.getZoom(), 17), { animate: true });
+        updateMapTexts(createdAt, accuracy, lat, lon);
+    }
+
+    document.querySelectorAll('.location-row').forEach((row) => {
+        row.addEventListener('click', () => {
+            document.querySelectorAll('.location-row').forEach((item) => item.classList.remove('is-selected'));
+            row.classList.add('is-selected');
+
+            const lat = Number(row.dataset.lat);
+            const lon = Number(row.dataset.lon);
+            const accuracy = row.dataset.accuracy ?? '';
+            const createdAt = row.dataset.createdAt ?? '';
+
+            if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+                focusLocation(lat, lon, createdAt, accuracy);
+            }
+        });
+    });
+
+    if (effectiveLat !== null && effectiveLon !== null) {
+        focusLocation(effectiveLat, effectiveLon, <?= json_encode($player['last_seen_at'] ?? ($lastKnownPosition['created_at'] ?? null), JSON_UNESCAPED_UNICODE) ?>, <?= json_encode($player['last_accuracy'] ?? ($lastKnownPosition['accuracy'] ?? null), JSON_UNESCAPED_UNICODE) ?>);
+    }
 </script>
 
 <?php require __DIR__ . '/../partials/footer.php'; ?>

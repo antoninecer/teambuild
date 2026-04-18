@@ -47,7 +47,7 @@ $stats = $pdo->query('SELECT
             <a class="btn btn-primary" href="/admin/games">Přejít na hry</a>
         </div>
     </article>
-
+    <?php if (($adminUser['global_role'] ?? 'none') === 'superadmin'): ?>
     <article class="card">
         <h2>Uživatelé</h2>
         <p>Přehled administrátorů a správců systému, jejich role, přístupy a změny hesel.</p>
@@ -57,6 +57,7 @@ $stats = $pdo->query('SELECT
             <a class="btn btn-primary" href="/admin/users">Otevřít uživatele</a>
         </div>
     </article>
+    <?php endif; ?>
 </section>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

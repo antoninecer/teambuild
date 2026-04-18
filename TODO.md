@@ -1,7 +1,64 @@
 # TODO
 
 Tento soubor je přepsaný podle skutečného stavu repozitáře, ne podle původního plánu.
+Priorita 1
 
+Oprávnění a oddělení herních adminů
+
+superadmin zakládá hry
+superadmin přiřazuje adminy ke hrám
+admin bez přiřazené hry nesmí nic vytvářet ani spravovat
+admin vidí jen své hry
+admin vidí jen své hráče
+admin vidí jen své SOS a své eventy
+zamknout URL přístupy serverově, ne jen v menu
+zamknout správu uživatelů jen pro superadmina
+Priorita 2
+
+UI pro přehrávání POI / treasure
+
+při přehrávání musí jít obsah zastavit
+ideálně stavové tlačítko:
+Přehrát
+Zastavit
+při zavření modalu se čtení musí ukončit
+přepnutí na jiné POI / treasure musí předchozí čtení ukončit
+nesmí se stát, že hlas běží dál na pozadí bez kontroly
+Priorita 3
+
+Dočištění práv v celé admin části
+
+POI jen pro správce dané hry
+poklady jen pro správce dané hry
+invites jen pro správce dané hry
+detail hráče jen pro správce jeho hry
+header alerty filtrovat podle přidělených her
+Priorita 4
+
+Admin návody
+
+game admin
+superadmin
+případně prolink na hráčský návod
+Priorita 5
+
+UX hráče
+
+itinerář hry
+rozlišení markerů hráč / POI / treasure
+další jemné doladění dashboardu
+Priorita 6
+
+Blueprint / JSON import
+
+schema
+validace
+ukázkový blueprint
+importer
+
+Tohle je teď správné pořadí.
+
+A ano: ten problém s přehráváním POI/treasure je reálný UX bug, ne kosmetika. Jen je pořád menší než bezpečnost a oprávnění adminů.
 ---
 
 ## Ověřeně hotové

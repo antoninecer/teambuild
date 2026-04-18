@@ -280,6 +280,16 @@ if ($method === 'POST' && $uri === '/api/player/poi/complete') {
     exit;
 }
 
+if ($method === 'POST' && preg_match('#^/admin/games/(\d+)/admins$#', $uri, $matches)) {
+    (new GameController())->assignAdmin((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'POST' && preg_match('#^/admin/games/(\d+)/admins/(\d+)/delete$#', $uri, $matches)) {
+    (new GameController())->removeAdmin((int) $matches[1], (int) $matches[2]);
+    exit;
+}
+
 // 404
 http_response_code(404);
 header('Content-Type: text/plain; charset=utf-8');

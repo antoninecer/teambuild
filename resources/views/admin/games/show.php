@@ -140,6 +140,62 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
     </dl>
 </div>
 
+<div class="card" style="margin-top: 20px;">
+    <h3>Správci hry</h3>
+
+    <?php if (empty($gameAdmins)): ?>
+        <p class="help">K této hře zatím není přiřazen žádný správce.</p>
+    <?php else: ?>
+        <div class="table-wrap" style="margin-bottom: 16px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Uživatel</th>
+                        <th>E-mail</th>
+                        <th>Role ve hře</th>
+                        <th>Přiřazeno</th>
+                        <th>Akce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($gameAdmins as $admin): ?>
+                        <tr>
+    <td><?= htmlspecialchars((string)$admin['username'], ENT_QUOTES, 'UTF-8') ?></td>
+    <td><?= htmlspecialchars((string)($admin['email'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
+    <td><?= htmlspecialchars((string)$admin['game_role'], ENT_QUOTES, 'UTF-8') ?></td>
+    <td><?= htmlspecialchars((string)$admin['assigned_at'], ENT_QUOTES, 'UTF-8') ?></td>
+    <td>
+        <form method="post" action="/admin/games/<?= (int)$game['id'] ?>/admins/<?= (int)$admin['id'] ?>/delete" onsubmit="return confirm('Opravdu odebrat tohoto správce ze hry?');">
+            <button type="submit" class="btn btn-secondary">Odebrat</button>
+        </form>
+    </td>
+</tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+
+    <form method="post" action="/admin/games/<?= (int)$game['id'] ?>/admins">
+        <div class="form-group">
+            <label for="user_id">Přidat správce ke hře</label>
+            <select id="user_id" name="user_id" required>
+                <option value="">-- vyber admina --</option>
+                <?php foreach ($assignableAdmins as $admin): ?>
+                    <option value="<?= (int)$admin['id'] ?>">
+                        <?= htmlspecialchars((string)$admin['username'], ENT_QUOTES, 'UTF-8') ?>
+                        <?php if (!empty($admin['email'])): ?>
+                            (<?= htmlspecialchars((string)$admin['email'], ENT_QUOTES, 'UTF-8') ?>)
+                        <?php endif; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Přiřadit správce</button>
+    </form>
+</div>
+
 <div class="card" style="margin-top: 24px;">
     <h3>Sdílení hry</h3>
 

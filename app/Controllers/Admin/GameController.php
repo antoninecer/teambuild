@@ -25,15 +25,27 @@ final class GameController
         return $_SESSION['admin_user'];
     }
 
-    public function index(): void
-    {
-        $this->requireAdmin();
+public function index(): void
+{
+    $adminUser = $this->requireAdmin();
 
-        $repo = new GameRepository();
-        $games = $repo->all();
+    $gameRepo = new \App\Repositories\GameRepository();
 
-        require __DIR__ . '/../../../resources/views/admin/games/index.php';
+    if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+        $games = $gameRepo->all();
+    } else {
+        $userRepo = new \App\Repositories\UserRepository();
+        $accessibleGameIds = $userRepo->findAccessibleGameIdsForUser((int) $adminUser['id']);
+
+        if (empty($accessibleGameIds)) {
+            $games = [];
+        } else {
+            $games = $gameRepo->findByIds($accessibleGameIds);
+        }
     }
+
+    require __DIR__ . '/../../../resources/views/admin/games/index.php';
+}
 
     public function createForm(): void
     {
@@ -155,10 +167,13 @@ final class GameController
 
     public function show(int $id): void
     {
-        $this->requireAdmin();
+        $this->requireGameAccess($id);
 
         $repo = new GameRepository();
         $game = $repo->findById($id);
+        $userRepo = new \App\Repositories\UserRepository();
+        $gameAdmins = $userRepo->findAdminsForGame($id);
+        $assignableAdmins = $userRepo->allAssignableGameAdminsForGame($id);
 
         if (!$game) {
             http_response_code(404);
@@ -169,9 +184,89 @@ final class GameController
         require __DIR__ . '/../../../resources/views/admin/games/show.php';
     }
 
+    private function requireSuperadmin(): array
+{
+    $adminUser = $this->requireAdmin();
+
+    if (($adminUser['global_role'] ?? 'none') !== 'superadmin') {
+        http_response_code(403);
+        echo 'Tato akce je povolena jen superadminovi.';
+        exit;
+    }
+
+    return $adminUser;
+}
+
+public function assignAdmin(int $gameId): void
+{
+    $this->requireSuperadmin();
+
+    $gameRepo = new \App\Repositories\GameRepository();
+    $game = $gameRepo->findById($gameId);
+
+    if (!$game) {
+        http_response_code(404);
+        echo 'Hra nebyla nalezena.';
+        exit;
+    }
+
+    $userId = (int) ($_POST['user_id'] ?? 0);
+
+    if ($userId <= 0) {
+        header('Location: /admin/games/' . $gameId);
+        exit;
+    }
+
+    $userRepo = new \App\Repositories\UserRepository();
+    $user = $userRepo->findById($userId);
+
+    if (!$user) {
+        http_response_code(404);
+        echo 'Uživatel nebyl nalezen.';
+        exit;
+    }
+
+    if (($user['global_role'] ?? 'none') === 'superadmin') {
+        http_response_code(403);
+        echo 'Superadmina není potřeba přiřazovat ke hře.';
+        exit;
+    }
+
+    if (($user['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        echo 'Přiřadit lze pouze uživatele s rolí admin.';
+        exit;
+    }
+
+    $userRepo->assignAdminToGame($userId, $gameId, 'game_admin');
+
+    header('Location: /admin/games/' . $gameId);
+    exit;
+}
+
+public function removeAdmin(int $gameId, int $userId): void
+{
+    $this->requireSuperadmin();
+
+    $gameRepo = new \App\Repositories\GameRepository();
+    $game = $gameRepo->findById($gameId);
+
+    if (!$game) {
+        http_response_code(404);
+        echo 'Hra nebyla nalezena.';
+        exit;
+    }
+
+    $userRepo = new \App\Repositories\UserRepository();
+    $userRepo->removeAdminFromGame($userId, $gameId, 'game_admin');
+
+    header('Location: /admin/games/' . $gameId);
+    exit;
+}
+
 public function editForm(int $id): void
 {
-    $this->requireAdmin();
+    $this->requireGameAccess($id);
 
     $gameRepo = new \App\Repositories\GameRepository();
     $game = $gameRepo->findById($id);
@@ -187,7 +282,7 @@ public function editForm(int $id): void
 
 public function update(int $id): void
 {
-    $this->requireAdmin();
+    $this->requireGameAccess($id);
 
     $gameRepo = new \App\Repositories\GameRepository();
     $game = $gameRepo->findById($id);
@@ -303,5 +398,24 @@ public function update(int $id): void
     $recentEvents = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
 
     require __DIR__ . '/../../../resources/views/admin/players/show.php';
+}
+
+private function requireGameAccess(int $gameId): array
+{
+    $adminUser = $this->requireAdmin();
+
+    if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+        return $adminUser;
+    }
+
+    $userRepo = new \App\Repositories\UserRepository();
+
+    if (!$userRepo->hasGameAccess((int) $adminUser['id'], $gameId)) {
+        http_response_code(403);
+        echo 'Na tuto hru nemáte oprávnění.';
+        exit;
+    }
+
+    return $adminUser;
 }
 }

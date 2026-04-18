@@ -1,18 +1,22 @@
 <?php
 $pageTitle = 'Seznam her';
-$pageSubtitle = 'Přehled všech her, jejich stavů a základních parametrů.';
+$pageSubtitle = 'Přehled her, jejich stavů a základních parametrů.';
 $activeNav = 'games';
 
 require __DIR__ . '/../partials/header.php';
 ?>
 
 <div class="page-actions">
-    <a class="btn btn-primary" href="/admin/games/create">Vytvořit novou hru</a>
+    <?php if (($adminUser['global_role'] ?? 'none') === 'superadmin'): ?>
+        <a class="btn btn-primary" href="/admin/games/create">Vytvořit novou hru</a>
+    <?php endif; ?>
 </div>
 
 <?php if (empty($games)): ?>
     <div class="card">
-        <p style="margin:0; color: var(--ink-soft);">Zatím nebyly vytvořeny žádné hry.</p>
+        <p style="margin: 0; color: var(--ink-soft);">
+            Nemáte přidělenou žádnou hru. Kontaktujte superadmina.
+        </p>
     </div>
 <?php else: ?>
     <div class="table-wrap">
@@ -32,10 +36,10 @@ require __DIR__ . '/../partials/header.php';
                 <?php foreach ($games as $game): ?>
                     <tr>
                         <td><?= (int) $game['id'] ?></td>
-                        <td><?= htmlspecialchars($game['name'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string) $game['name'], ENT_QUOTES, 'UTF-8') ?></td>
                         <td>
                             <span class="status-badge">
-                                <?= htmlspecialchars($game['status'], ENT_QUOTES, 'UTF-8') ?>
+                                <?= htmlspecialchars((string) $game['status'], ENT_QUOTES, 'UTF-8') ?>
                             </span>
                         </td>
                         <td>
@@ -45,8 +49,8 @@ require __DIR__ . '/../partials/header.php';
                                 <span class="mode-badge mode-self">Samostatná hra</span>
                             <?php endif; ?>
                         </td>
-                        <td><?= htmlspecialchars($game['starts_at'], ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($game['ends_at'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string) ($game['starts_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string) ($game['ends_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                         <td>
                             <a class="btn btn-secondary" href="/admin/games/<?= (int) $game['id'] ?>">Detail</a>
                         </td>

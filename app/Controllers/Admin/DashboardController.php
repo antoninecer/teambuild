@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Repositories\HelpRepository;
+use App\Repositories\UserRepository;
 use App\Support\Database;
 
 final class DashboardController
@@ -23,23 +24,66 @@ final class DashboardController
         return $_SESSION['admin_user'];
     }
 
+    private function getAccessibleGameIds(array $adminUser): ?array
+    {
+        if (($adminUser['global_role'] ?? 'none') === 'superadmin') {
+            return null;
+        }
+
+        $userRepo = new UserRepository();
+
+        return $userRepo->findAccessibleGameIdsForUser((int) $adminUser['id']);
+    }
+
     public function index(): void
     {
         $adminUser = $this->requireAdmin();
+
+        if (($adminUser['global_role'] ?? 'none') !== 'superadmin') {
+            header('Location: /admin/games');
+            exit;
+        }
+
+        $pdo = Database::connection();
+
+        $gamesCount = (int) $pdo->query('SELECT COUNT(*) FROM games')->fetchColumn();
+        $playersCount = (int) $pdo->query('SELECT COUNT(*) FROM players')->fetchColumn();
+        $usersCount = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
 
         require __DIR__ . '/../../../resources/views/admin/index.php';
     }
 
     public function headerStatus(): void
     {
-        $this->requireAdmin();
+        $adminUser = $this->requireAdmin();
 
         header('Content-Type: application/json; charset=utf-8');
 
         $pdo = Database::connection();
+        $accessibleGameIds = $this->getAccessibleGameIds($adminUser);
 
-        $sosStmt = $pdo->query(
-            "SELECT 
+        if (is_array($accessibleGameIds) && empty($accessibleGameIds)) {
+            echo json_encode([
+                'counts' => [
+                    'sos_open' => 0,
+                    'new_events' => 0,
+                ],
+                'events' => [],
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $gameFilterSql = '';
+        $gameFilterParams = [];
+
+        if (is_array($accessibleGameIds)) {
+            $placeholders = implode(',', array_fill(0, count($accessibleGameIds), '?'));
+            $gameFilterSql = " AND hr.game_id IN ($placeholders)";
+            $gameFilterParams = array_map('intval', $accessibleGameIds);
+        }
+
+        $sosSql = "
+            SELECT 
                 hr.id,
                 hr.game_id,
                 hr.player_id,
@@ -52,13 +96,26 @@ final class DashboardController
              JOIN players p ON p.id = hr.player_id
              JOIN games g ON g.id = hr.game_id
              WHERE hr.status IN ('open', 'acknowledged')
+             {$gameFilterSql}
              ORDER BY hr.created_at DESC
-             LIMIT 20"
-        );
+             LIMIT 20
+        ";
+
+        $sosStmt = $pdo->prepare($sosSql);
+        $sosStmt->execute($gameFilterParams);
         $sosRows = $sosStmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $eventsStmt = $pdo->query(
-            "SELECT 
+        $eventFilterSql = '';
+        $eventFilterParams = [];
+
+        if (is_array($accessibleGameIds)) {
+            $placeholders = implode(',', array_fill(0, count($accessibleGameIds), '?'));
+            $eventFilterSql = " WHERE e.game_id IN ($placeholders)";
+            $eventFilterParams = array_map('intval', $accessibleGameIds);
+        }
+
+        $eventsSql = "
+            SELECT 
                 e.id,
                 e.event_type,
                 e.created_at,
@@ -73,22 +130,26 @@ final class DashboardController
              LEFT JOIN players p ON p.id = e.player_id
              LEFT JOIN games g ON g.id = e.game_id
              LEFT JOIN pois poi ON poi.id = e.poi_id
+             {$eventFilterSql}
              ORDER BY e.created_at DESC
-             LIMIT 30"
-        );
+             LIMIT 30
+        ";
+
+        $eventsStmt = $pdo->prepare($eventsSql);
+        $eventsStmt->execute($eventFilterParams);
         $eventRows = $eventsStmt->fetchAll(\PDO::FETCH_ASSOC);
 
         $events = [];
 
         foreach ($sosRows as $row) {
-            $status = (string) ($row['status'] ?? 'open');
+            $severity = ($row['status'] ?? 'open') === 'open' ? 'critical' : 'warning';
 
             $events[] = [
                 'id' => 'sos-' . $row['id'],
                 'help_id' => (int) $row['id'],
                 'type' => 'sos_open',
-                'severity' => $status === 'open' ? 'critical' : 'warning',
-                'status' => $status,
+                'severity' => $severity,
+                'status' => (string) $row['status'],
                 'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' potřebuje pomoc',
                 'detail_message' => (string) ($row['message'] ?? ''),
                 'created_at' => $row['created_at'],
@@ -118,7 +179,6 @@ final class DashboardController
                     'type' => 'treasure_claimed',
                     'severity' => 'info',
                     'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' sebral poklad ' . $treasureName,
-                    'detail_message' => '',
                     'created_at' => $row['created_at'],
                     'game_id' => (int) $row['game_id'],
                     'player_id' => (int) $row['player_id'],
@@ -131,7 +191,6 @@ final class DashboardController
                     'type' => 'poi_completed',
                     'severity' => 'info',
                     'message' => 'Hráč ' . ($row['player_nickname'] ?: ('#' . $row['player_id'])) . ' dokončil POI ' . $poiName,
-                    'detail_message' => '',
                     'created_at' => $row['created_at'],
                     'game_id' => (int) $row['game_id'],
                     'player_id' => (int) $row['player_id'],
@@ -148,7 +207,7 @@ final class DashboardController
         echo json_encode([
             'counts' => [
                 'sos_open' => count(array_filter($sosRows, static function (array $row): bool {
-                    return ($row['status'] ?? 'open') === 'open';
+                    return ($row['status'] ?? '') === 'open';
                 })),
                 'new_events' => count($events),
             ],

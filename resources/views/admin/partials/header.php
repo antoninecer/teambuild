@@ -48,10 +48,12 @@ $activeNav = $activeNav ?? '';
 
             <div class="admin-nav-row">
                 <nav class="admin-nav">
-                    <a class="nav-link <?= $activeNav === 'games' ? 'active' : '' ?>" href="/admin/games">Hry</a>
-                    <a class="nav-link <?= $activeNav === 'users' ? 'active' : '' ?>" href="/admin/users">Uživatelé</a>
-                </nav>
+    <a class="nav-link <?= $activeNav === 'games' ? 'active' : '' ?>" href="/admin/games">Hry</a>
 
+    <?php if (($adminUser['global_role'] ?? 'none') === 'superadmin'): ?>
+        <a class="nav-link <?= $activeNav === 'users' ? 'active' : '' ?>" href="/admin/users">Uživatelé</a>
+    <?php endif; ?>
+</nav>
                 <?php require __DIR__ . '/header_alerts.php'; ?>
             </div>
         </header>

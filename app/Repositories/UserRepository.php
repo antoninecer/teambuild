@@ -122,4 +122,137 @@ final class UserRepository
 
         $stmt->execute(['id' => $userId]);
     }
+
+    public function findAdminsForGame(int $gameId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.global_role,
+                u.role,
+                u.is_active,
+                ugr.role AS game_role,
+                ugr.created_at AS assigned_at
+             FROM user_game_roles ugr
+             JOIN users u ON u.id = ugr.user_id
+             WHERE ugr.game_id = :game_id
+             ORDER BY u.username ASC'
+        );
+
+        $stmt->execute(['game_id' => $gameId]);
+
+        return $stmt->fetchAll();
+    }
+
+public function allAssignableGameAdminsForGame(int $gameId): array
+{
+    $pdo = Database::connection();
+
+    $stmt = $pdo->prepare(
+        "SELECT
+            u.id,
+            u.username,
+            u.email,
+            u.global_role,
+            u.role,
+            u.is_active
+         FROM users u
+         WHERE u.is_active = 1
+           AND u.role = 'admin'
+           AND u.global_role <> 'superadmin'
+           AND u.id NOT IN (
+               SELECT ugr.user_id
+               FROM user_game_roles ugr
+               WHERE ugr.game_id = :game_id
+                 AND ugr.role = 'game_admin'
+           )
+         ORDER BY u.username ASC"
+    );
+
+    $stmt->execute([
+        'game_id' => $gameId,
+    ]);
+
+    return $stmt->fetchAll();
+}
+
+    public function assignAdminToGame(int $userId, int $gameId, string $role = 'game_admin'): void
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'INSERT IGNORE INTO user_game_roles (user_id, game_id, role)
+             VALUES (:user_id, :game_id, :role)'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'game_id' => $gameId,
+            'role' => $role,
+        ]);
+    }
+
+    public function removeAdminFromGame(int $userId, int $gameId, string $role = 'game_admin'): void
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'DELETE FROM user_game_roles
+             WHERE user_id = :user_id
+               AND game_id = :game_id
+               AND role = :role'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'game_id' => $gameId,
+            'role' => $role,
+        ]);
+    }
+
+    public function hasGameAccess(int $userId, int $gameId): bool
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT 1
+             FROM user_game_roles
+             WHERE user_id = :user_id
+               AND game_id = :game_id
+               AND role = :role
+             LIMIT 1'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'game_id' => $gameId,
+            'role' => 'game_admin',
+        ]);
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function findAccessibleGameIdsForUser(int $userId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare(
+            'SELECT game_id
+             FROM user_game_roles
+             WHERE user_id = :user_id
+               AND role = :role
+             ORDER BY game_id ASC'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'role' => 'game_admin',
+        ]);
+
+        return array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+    }
 }

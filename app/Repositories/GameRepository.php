@@ -181,4 +181,26 @@ final class GameRepository
     ]);
 }
 
+public function findByIds(array $ids): array
+{
+    if (empty($ids)) {
+        return [];
+    }
+
+    $pdo = Database::connection();
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+    $stmt = $pdo->prepare(
+        "SELECT *
+         FROM games
+         WHERE id IN ($placeholders)
+         ORDER BY starts_at DESC, id DESC"
+    );
+
+    $stmt->execute(array_map('intval', $ids));
+
+    return $stmt->fetchAll();
+}
+
 }
