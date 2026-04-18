@@ -689,9 +689,9 @@
             <div id="poiText" class="poi-text"></div>
             <div class="modal-btns">
                 <button id="speechPlayBtn" class="modal-btn" style="background:#1976d2; color:#fff;" onclick="speakCurrentText()">PŘEČÍST NAHLAS</button>
-<button id="speechPauseBtn" class="modal-btn" style="background:#f57c00; color:#fff; display:none;" onclick="pauseSpeech()">POZASTAVIT</button>
-<button id="speechResumeBtn" class="modal-btn" style="background:#388e3c; color:#fff; display:none;" onclick="resumeSpeech()">POKRAČOVAT</button>
-<button id="speechStopBtn" class="modal-btn" style="background:#757575; color:#fff; display:none;" onclick="stopSpeech()">ZASTAVIT</button>
+                <button id="speechPauseBtn" class="modal-btn" style="background:#f57c00; color:#fff; display:none;" onclick="pauseSpeech()">POZASTAVIT</button>
+                <button id="speechResumeBtn" class="modal-btn" style="background:#388e3c; color:#fff; display:none;" onclick="resumeSpeech()">POKRAČOVAT</button>
+                <button id="speechStopBtn" class="modal-btn" style="background:#757575; color:#fff; display:none;" onclick="stopSpeech()">ZASTAVIT</button>
                 <button id="completePoiBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="completeCurrentPoi()">POTVRDIT PRŮZKUM</button>
                 <button id="claimBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="claimCurrentTreasure()">SEBRAT POKLAD</button>
                 <button class="modal-btn" style="background:#eee;" onclick="closePoiModal()">ZAVŘÍT</button>
@@ -724,6 +724,7 @@
         let exploreCandidates = [];
         let currentDetail = null;
         let speechUtterance = null;
+        let speechState = 'idle'; // idle | speaking | paused
 
         function escapeHtml(str) {
             return String(str ?? '')
@@ -951,6 +952,8 @@
         }
 
         function openPoiDetail(poi) {
+            stopSpeech(true);
+
             currentDetail = {
                 kind: 'poi',
                 id: Number(poi.id),
@@ -984,6 +987,8 @@
         }
 
         function openTreasureDetail(treasure) {
+            stopSpeech(true);
+
             currentDetail = {
                 kind: 'treasure',
                 id: Number(treasure.id),
@@ -1032,8 +1037,46 @@
         }
 
         function closePoiModal() {
-            stopSpeech();
+            stopSpeech(true);
             document.getElementById('poiModal').style.display = 'none';
+        }
+
+        function updateSpeechButtons() {
+            const playBtn = document.getElementById('speechPlayBtn');
+            const pauseBtn = document.getElementById('speechPauseBtn');
+            const resumeBtn = document.getElementById('speechResumeBtn');
+            const stopBtn = document.getElementById('speechStopBtn');
+
+            if (!playBtn || !pauseBtn || !resumeBtn || !stopBtn) {
+                return;
+            }
+
+            if (speechState === 'speaking') {
+                playBtn.style.display = 'none';
+                pauseBtn.style.display = 'inline-block';
+                resumeBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                return;
+            }
+
+            if (speechState === 'paused') {
+                playBtn.style.display = 'none';
+                pauseBtn.style.display = 'none';
+                resumeBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'inline-block';
+                return;
+            }
+
+            playBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+            resumeBtn.style.display = 'none';
+            stopBtn.style.display = 'none';
+        }
+
+        function resetSpeechState() {
+            speechUtterance = null;
+            speechState = 'idle';
+            updateSpeechButtons();
         }
 
         function speakCurrentText() {
@@ -1041,22 +1084,65 @@
                 return;
             }
 
-            stopSpeech();
-
             if (!('speechSynthesis' in window)) {
                 alert('Tento prohlížeč nepodporuje hlasové čtení.');
                 return;
             }
 
+            stopSpeech(true);
+
             speechUtterance = new SpeechSynthesisUtterance(currentDetail.text);
             speechUtterance.lang = 'cs-CZ';
+            speechUtterance.onstart = function () {
+                speechState = 'speaking';
+                updateSpeechButtons();
+            };
+            speechUtterance.onend = function () {
+                resetSpeechState();
+            };
+            speechUtterance.onerror = function () {
+                resetSpeechState();
+            };
+
             window.speechSynthesis.speak(speechUtterance);
+            speechState = 'speaking';
+            updateSpeechButtons();
         }
 
-        function stopSpeech() {
+        function pauseSpeech() {
+            if (!('speechSynthesis' in window)) {
+                return;
+            }
+
+            if (speechState !== 'speaking') {
+                return;
+            }
+
+            window.speechSynthesis.pause();
+            speechState = 'paused';
+            updateSpeechButtons();
+        }
+
+        function resumeSpeech() {
+            if (!('speechSynthesis' in window)) {
+                return;
+            }
+
+            if (speechState !== 'paused') {
+                return;
+            }
+
+            window.speechSynthesis.resume();
+            speechState = 'speaking';
+            updateSpeechButtons();
+        }
+
+        function stopSpeech(silent) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
+
+            resetSpeechState();
         }
 
         function claimCurrentTreasure() {
@@ -1097,7 +1183,9 @@
 
                     closePoiModal();
                     updatePlayerCardStats();
-                    reloadMapData();
+                    updateSpeechButtons();
+
+        reloadMapData();
                     return;
                 }
 
