@@ -327,6 +327,9 @@ function eventDetail(array $event): string
         <div class="card">
             <div class="map-title-row">
                 <h3 id="player-map-title">Poslední známá poloha</h3>
+                <?php if (!empty($locationHistory)): ?>
+                    <button id="toggle-path-btn" type="button" class="btn btn-secondary">Zobrazit trasu</button>
+                <?php endif; ?>
             </div>
             <div id="player-map-subtitle" class="map-subtitle">
                 <?php if ($lastKnownPosition): ?>
@@ -456,8 +459,35 @@ function eventDetail(array $event): string
     <?php endif; ?>
 
     let pathLine = null;
+    let pathVisible = false;
     if (pathPoints.length > 0) {
-        pathLine = L.polyline(pathPoints, { color: 'red', weight: 3, opacity: 0.5 }).addTo(map);
+        pathLine = L.polyline(pathPoints, { color: 'red', weight: 3, opacity: 0.45 });
+    }
+
+    const togglePathBtn = document.getElementById('toggle-path-btn');
+
+    function setPathVisibility(visible) {
+        pathVisible = visible;
+
+        if (!pathLine) {
+            return;
+        }
+
+        if (pathVisible) {
+            pathLine.addTo(map);
+        } else if (map.hasLayer(pathLine)) {
+            map.removeLayer(pathLine);
+        }
+
+        if (togglePathBtn) {
+            togglePathBtn.textContent = pathVisible ? 'Skrýt trasu' : 'Zobrazit trasu';
+        }
+    }
+
+    if (togglePathBtn) {
+        togglePathBtn.addEventListener('click', () => {
+            setPathVisibility(!pathVisible);
+        });
     }
 
     let selectedMarker = null;
