@@ -14,6 +14,7 @@ require_once __DIR__ . '/../app/Repositories/TeamRepository.php';
 require_once __DIR__ . '/../app/Repositories/PlayerRepository.php';
 require_once __DIR__ . '/../app/Repositories/HelpRepository.php';
 require_once __DIR__ . '/../app/Repositories/TreasureRepository.php';
+require_once __DIR__ . '/../app/Controllers/Public/PublicScoreboardController.php';
 
 // Controllers - Admin
 require_once __DIR__ . '/../app/Controllers/Admin/AuthController.php';
@@ -36,6 +37,7 @@ use App\Controllers\Admin\TreasureController;
 use App\Controllers\Admin\UserController;
 use App\Controllers\Player\PlayerController;
 use App\Repositories\GameRepository;
+use App\Controllers\Public\PublicScoreboardController;
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
@@ -235,6 +237,16 @@ if ($method === 'POST' && preg_match('#^/admin/games/(\d+)/invites$#', $uri, $ma
 
 if ($method === 'POST' && preg_match('#^/admin/invites/(\d+)/delete$#', $uri, $matches)) {
     (new InviteController())->delete((int) $matches[1]);
+    exit;
+}
+
+if ($method === 'GET' && preg_match('#^/scoreboard/([^/]+)/data$#', $uri, $matches)) {
+    (new PublicScoreboardController())->data($matches[1]);
+    exit;
+}
+
+if ($method === 'GET' && preg_match('#^/scoreboard/([^/]+)$#', $uri, $matches)) {
+    (new PublicScoreboardController())->show($matches[1]);
     exit;
 }
 
