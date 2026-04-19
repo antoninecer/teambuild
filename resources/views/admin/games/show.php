@@ -49,6 +49,11 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
     'treasures_count' => 0,
     'treasure_claims_count' => 0,
 ];
+
+$baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+$gameUrl = $baseUrl . '/game/' . $game['slug'];
+$scoreboardUrl = $baseUrl . '/scoreboard/' . $game['slug'];
+$scoreboardQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' . rawurlencode($scoreboardUrl);
 ?>
 
 <style>
@@ -98,6 +103,39 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
         font-family: monospace;
         word-break: break-all;
         margin: 12px 0;
+    }
+    .share-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+    .qr-card {
+        background: rgba(255,255,255,0.45);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        text-align: center;
+    }
+    .qr-card img {
+        display: block;
+        width: 100%;
+        max-width: 260px;
+        height: auto;
+        margin: 0 auto 12px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 10px;
+        border: 1px solid var(--line);
+    }
+    .mini-help {
+        font-size: 13px;
+        color: var(--ink-soft);
+    }
+    @media (max-width: 980px) {
+        .share-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -160,32 +198,32 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
                 <tbody>
                     <?php foreach ($gameAdmins as $admin): ?>
                         <tr>
-    <td><?= htmlspecialchars((string)$admin['username'], ENT_QUOTES, 'UTF-8') ?></td>
-    <td><?= htmlspecialchars((string)($admin['email'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
-    <td><?= htmlspecialchars((string)$admin['game_role'], ENT_QUOTES, 'UTF-8') ?></td>
-    <td><?= htmlspecialchars((string)$admin['assigned_at'], ENT_QUOTES, 'UTF-8') ?></td>
-    <td>
-        <form method="post" action="/admin/games/<?= (int)$game['id'] ?>/admins/<?= (int)$admin['id'] ?>/delete" onsubmit="return confirm('Opravdu odebrat tohoto správce ze hry?');">
-            <button type="submit" class="btn btn-secondary">Odebrat</button>
-        </form>
-    </td>
-</tr>
+                            <td><?= htmlspecialchars((string) $admin['username'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td><?= htmlspecialchars((string) ($admin['email'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
+                            <td><?= htmlspecialchars((string) $admin['game_role'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td><?= htmlspecialchars((string) $admin['assigned_at'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td>
+                                <form method="post" action="/admin/games/<?= (int) $game['id'] ?>/admins/<?= (int) $admin['id'] ?>/delete" onsubmit="return confirm('Opravdu odebrat tohoto správce ze hry?');">
+                                    <button type="submit" class="btn btn-secondary">Odebrat</button>
+                                </form>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
     <?php endif; ?>
 
-    <form method="post" action="/admin/games/<?= (int)$game['id'] ?>/admins">
+    <form method="post" action="/admin/games/<?= (int) $game['id'] ?>/admins">
         <div class="form-group">
             <label for="user_id">Přidat správce ke hře</label>
             <select id="user_id" name="user_id" required>
                 <option value="">-- vyber admina --</option>
                 <?php foreach ($assignableAdmins as $admin): ?>
-                    <option value="<?= (int)$admin['id'] ?>">
-                        <?= htmlspecialchars((string)$admin['username'], ENT_QUOTES, 'UTF-8') ?>
+                    <option value="<?= (int) $admin['id'] ?>">
+                        <?= htmlspecialchars((string) $admin['username'], ENT_QUOTES, 'UTF-8') ?>
                         <?php if (!empty($admin['email'])): ?>
-                            (<?= htmlspecialchars((string)$admin['email'], ENT_QUOTES, 'UTF-8') ?>)
+                            (<?= htmlspecialchars((string) $admin['email'], ENT_QUOTES, 'UTF-8') ?>)
                         <?php endif; ?>
                     </option>
                 <?php endforeach; ?>
@@ -199,11 +237,6 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
 <div class="card" style="margin-top: 24px;">
     <h3>Sdílení hry</h3>
 
-    <?php
-        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
-        $gameUrl = $baseUrl . "/game/" . $game['slug'];
-    ?>
-
     <div>
         <strong>Veřejný odkaz na hru:</strong>
         <div id="game-url" class="url-box">
@@ -211,10 +244,38 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
         </div>
 
         <div class="page-actions">
-            <button class="btn btn-secondary" onclick="copyGameUrl()">Kopírovat odkaz</button>
+            <button class="btn btn-secondary" type="button" onclick="copyTextById('game-url', 'Odkaz na hru zkopírován')">Kopírovat odkaz</button>
             <a class="btn btn-primary" href="/admin/games/<?= (int) $game['id'] ?>/invites">
                 Spravovat pozvánky
             </a>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+    <h3>Veřejná výsledovka</h3>
+
+    <div class="share-grid">
+        <div>
+            <strong>Veřejný odkaz na výsledovku:</strong>
+            <div id="scoreboard-url" class="url-box">
+                <?= htmlspecialchars($scoreboardUrl, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+
+            <div class="page-actions">
+                <button class="btn btn-secondary" type="button" onclick="copyTextById('scoreboard-url', 'Odkaz na výsledovku zkopírován')">Kopírovat odkaz</button>
+                <a class="btn btn-primary" href="<?= htmlspecialchars($scoreboardUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Otevřít výsledovku</a>
+            </div>
+
+            <p class="mini-help" style="margin-top: 12px;">
+                Tento odkaz je veřejný a je vhodný pro diváky, organizátory i sdílení přes QR.
+            </p>
+        </div>
+
+        <div class="qr-card">
+            <img src="<?= htmlspecialchars($scoreboardQrUrl, ENT_QUOTES, 'UTF-8') ?>" alt="QR kód veřejné výsledovky">
+            <div style="font-weight: 700; margin-bottom: 6px;">QR kód výsledovky</div>
+            <div class="mini-help">Naskenováním se otevře veřejná výsledovka této hry.</div>
         </div>
     </div>
 </div>
@@ -271,8 +332,8 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
                                 <?php if ($row['last_seen_at']): ?>
                                     <div style="font-size: 12px; color: var(--ink-soft);">
                                         <?= htmlspecialchars($row['last_seen_at'], ENT_QUOTES, 'UTF-8') ?><br>
-                                        <a href="https://www.google.com/maps?q=<?= (float)$row['last_lat'] ?>,<?= (float)$row['last_lon'] ?>" target="_blank" style="color: var(--accent);">
-                                            <?= round((float)$row['last_lat'], 5) ?>, <?= round((float)$row['last_lon'], 5) ?>
+                                        <a href="https://www.google.com/maps?q=<?= (float) $row['last_lat'] ?>,<?= (float) $row['last_lon'] ?>" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">
+                                            <?= round((float) $row['last_lat'], 5) ?>, <?= round((float) $row['last_lon'], 5) ?>
                                         </a>
                                     </div>
                                 <?php else: ?>
@@ -291,10 +352,10 @@ $gameStats = $statsStmt->fetch(\PDO::FETCH_ASSOC) ?: [
 </div>
 
 <script>
-function copyGameUrl() {
-    const text = document.getElementById("game-url").innerText;
+function copyTextById(id, message) {
+    const text = document.getElementById(id).innerText.trim();
     navigator.clipboard.writeText(text);
-    alert("Odkaz zkopírován");
+    alert(message);
 }
 </script>
 

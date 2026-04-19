@@ -1,0 +1,97 @@
+{
+  "game": {
+    "name": "",
+    "slug": "",
+    "description": "",
+    "intro_text": "",
+    "objective_text": "",
+    "player_guide_text": "",
+    "operation_mode": "self_service",
+    "status": "draft",
+    "registration_enabled": true,
+    "session_cookie_days": 365,
+    "map_center_lat": 0,
+    "map_center_lon": 0,
+    "map_default_zoom": 15
+  },
+  "theme": {
+    "genre": "",
+    "tone": "",
+    "target_audience": "",
+    "estimated_duration_minutes": 120,
+    "estimated_distance_km": 4.5,
+    "difficulty": "medium"
+  },
+  "start": {
+    "name": "",
+    "lat": 0,
+    "lon": 0,
+    "story_text": "",
+    "tts_text": "",
+    "radius_m": 50
+  },
+  "finish": {
+    "name": "",
+    "lat": 0,
+    "lon": 0,
+    "story_text": "",
+    "tts_text": "",
+    "radius_m": 50
+  },
+  "pois": [
+    {
+      "external_key": "poi_001",
+      "type": "story_point",
+      "name": "",
+      "lat": 0,
+      "lon": 0,
+      "radius_m": 50,
+      "sort_order": 1,
+      "is_required": true,
+      "auto_unlock_on_proximity": true,
+      "description": "",
+      "story_text": "",
+      "tts_text": "",
+      "hint_text": "",
+      "media": [
+        {
+          "media_type": "image",
+          "title": "",
+          "external_url": ""
+        }
+      ],
+      "dependencies": [],
+      "rewards": {
+        "points": 0,
+        "unlocks_poi_keys": [],
+        "unlocks_treasure_keys": []
+      }
+    }
+  ],
+  "treasures": [
+    {
+      "external_key": "treasure_001",
+      "name": "",
+      "description": "",
+      "lat": 0,
+      "lon": 0,
+      "radius_m": 20,
+      "treasure_type": "public",
+      "is_visible_on_map": false,
+      "points": 10,
+      "max_claims": 1,
+      "poi_dependency_keys": [],
+      "story_text": "",
+      "tts_text": ""
+    }
+  ],
+  "game_logic": {
+    "required_poi_keys_for_finish": [],
+    "required_treasure_keys_for_finish": [],
+    "optional_branches": [],
+    "failure_conditions": [],
+    "sos_policy": {
+      "mode": "retire_from_ranking"
+    }
+  }
+}
