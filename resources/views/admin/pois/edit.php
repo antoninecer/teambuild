@@ -65,15 +65,15 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
                 </div>
                 <div class="form-group">
                     <label for="description">Popis (interní)</label>
-                    <textarea id="description" name="description"><?= htmlspecialchars($old['description'] ?? (string)$poi['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
+                    <textarea id="description" name="description"><?= htmlspecialchars($old['description'] ?? (string) $poi['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
                 <div class="form-group">
                     <label for="story_text">Příběhový text (pro hráče)</label>
-                    <textarea id="story_text" name="story_text"><?= htmlspecialchars($old['story_text'] ?? (string)$poi['story_text'], ENT_QUOTES, 'UTF-8') ?></textarea>
+                    <textarea id="story_text" name="story_text"><?= htmlspecialchars($old['story_text'] ?? (string) $poi['story_text'], ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
                 <div class="form-group">
                     <label for="tts_text">TTS text (volitelné, pro hlasové čtení)</label>
-                    <textarea id="tts_text" name="tts_text"><?= htmlspecialchars($old['tts_text'] ?? (string)($poi['tts_text'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                    <textarea id="tts_text" name="tts_text"><?= htmlspecialchars($old['tts_text'] ?? (string) ($poi['tts_text'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
             </div>
             <div>
@@ -81,21 +81,21 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
                     <div class="form-group">
                         <label for="lat">Latitude*</label>
-                        <input type="text" id="lat" name="lat" value="<?= htmlspecialchars($old['lat'] ?? (string)$poi['lat'], ENT_QUOTES, 'UTF-8') ?>" required>
+                        <input type="text" id="lat" name="lat" value="<?= htmlspecialchars($old['lat'] ?? (string) $poi['lat'], ENT_QUOTES, 'UTF-8') ?>" required>
                     </div>
                     <div class="form-group">
                         <label for="lon">Longitude*</label>
-                        <input type="text" id="lon" name="lon" value="<?= htmlspecialchars($old['lon'] ?? (string)$poi['lon'], ENT_QUOTES, 'UTF-8') ?>" required>
+                        <input type="text" id="lon" name="lon" value="<?= htmlspecialchars($old['lon'] ?? (string) $poi['lon'], ENT_QUOTES, 'UTF-8') ?>" required>
                     </div>
                 </div>
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
                     <div class="form-group">
                         <label for="radius_m">Radius (metry)*</label>
-                        <input type="number" id="radius_m" name="radius_m" value="<?= htmlspecialchars($old['radius_m'] ?? (string)$poi['radius_m'], ENT_QUOTES, 'UTF-8') ?>" required>
+                        <input type="number" id="radius_m" name="radius_m" value="<?= htmlspecialchars($old['radius_m'] ?? (string) $poi['radius_m'], ENT_QUOTES, 'UTF-8') ?>" required>
                     </div>
                     <div class="form-group">
                         <label for="sort_order">Pořadí</label>
-                        <input type="number" id="sort_order" name="sort_order" value="<?= htmlspecialchars($old['sort_order'] ?? (string)$poi['sort_order'], ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="number" id="sort_order" name="sort_order" value="<?= htmlspecialchars($old['sort_order'] ?? (string) $poi['sort_order'], ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                 </div>
             </div>
@@ -103,15 +103,15 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
 
         <div style="display: flex; gap: 20px; flex-wrap: wrap; margin: 20px 0;">
             <div class="checkbox-group">
-                <input type="checkbox" id="auto_unlock_on_proximity" name="auto_unlock_on_proximity" value="1" <?= ($old['auto_unlock_on_proximity'] ?? (string)$poi['auto_unlock_on_proximity']) == '1' ? 'checked' : '' ?>>
+                <input type="checkbox" id="auto_unlock_on_proximity" name="auto_unlock_on_proximity" value="1" <?= ($old['auto_unlock_on_proximity'] ?? (string) $poi['auto_unlock_on_proximity']) == '1' ? 'checked' : '' ?>>
                 <label for="auto_unlock_on_proximity">Automaticky odemknout v dosahu</label>
             </div>
             <div class="checkbox-group">
-                <input type="checkbox" id="is_required" name="is_required" value="1" <?= ($old['is_required'] ?? (string)$poi['is_required']) == '1' ? 'checked' : '' ?>>
+                <input type="checkbox" id="is_required" name="is_required" value="1" <?= ($old['is_required'] ?? (string) $poi['is_required']) == '1' ? 'checked' : '' ?>>
                 <label for="is_required">Povinný bod</label>
             </div>
             <div class="checkbox-group">
-                <input type="checkbox" id="is_enabled" name="is_enabled" value="1" <?= ($old['is_enabled'] ?? (string)$poi['is_enabled']) == '1' ? 'checked' : '' ?>>
+                <input type="checkbox" id="is_enabled" name="is_enabled" value="1" <?= ($old['is_enabled'] ?? (string) $poi['is_enabled']) == '1' ? 'checked' : '' ?>>
                 <label for="is_enabled">Aktivní</label>
             </div>
         </div>
@@ -200,11 +200,13 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
         const container = document.getElementById('mediaContainer');
 
         const mediaType = data.media_type || 'image';
-        const filePath = data.file_path || '';
-        const title = data.title || data.alt_text || '';
+        const externalUrl = data.external_url || '';
+        const existingPath = data.file_path || '';
+        const title = data.title || data.label || data.alt_text || '';
         const sortOrder = data.sort_order ?? index;
-        const existingInfo = filePath
-            ? `<div class="media-preview">Aktuálně: <a href="${escapeHtml(filePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(filePath)}</a></div>`
+
+        const existingInfo = existingPath
+            ? `<div class="media-preview">Aktuálně: <a href="${escapeHtml(existingPath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(existingPath)}</a></div>`
             : '';
 
         const row = document.createElement('div');
@@ -216,18 +218,20 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
                     <select name="media[${index}][media_type]">
                         <option value="image" ${mediaType === 'image' ? 'selected' : ''}>Obrázek</option>
                         <option value="video" ${mediaType === 'video' ? 'selected' : ''}>YouTube video</option>
+                        <option value="audio" ${mediaType === 'audio' ? 'selected' : ''}>Audio</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label>Externí URL</label>
-                    <input type="text" name="media[${index}][file_path]" value="${escapeHtml(filePath)}" placeholder="https://...">
+                    <input type="text" name="media[${index}][external_url]" value="${escapeHtml(externalUrl)}" placeholder="https://...">
+                    <input type="hidden" name="media[${index}][existing_path]" value="${escapeHtml(existingPath)}">
                     ${existingInfo}
                 </div>
 
                 <div class="form-group">
                     <label>Nahrát soubor</label>
-                    <input type="file" name="media_file_${index}" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                    <input type="file" name="media_file_${index}" accept=".jpg,.jpeg,.png,.webp,.mp3,.wav,.ogg,.m4a,image/jpeg,image/png,image/webp,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4">
                 </div>
 
                 <div class="form-group">

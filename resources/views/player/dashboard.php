@@ -534,7 +534,7 @@
 
             mediaList.forEach(media => {
                 const mediaType = String(media.media_type || '').toLowerCase();
-                const filePath = String(media.file_path || '').trim();
+                const filePath = String(media.file_path || media.external_url || '').trim();
 
                 if (!filePath) {
                     return;
