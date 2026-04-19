@@ -317,19 +317,19 @@ final class PoiController
         exit;
     }
 
-    private function validateMediaInput(array $mediaInput, array $files): array
+    private function validateMediaInput(array $mediaRows, array $files): array
     {
         $errors = [];
 
-        foreach ($mediaInput as $index => $row) {
-            $type = trim((string) ($row['media_type'] ?? ''));
-            $label = trim((string) ($row['label'] ?? ''));
-            $externalUrl = trim((string) ($row['external_url'] ?? ''));
-            $existingPath = trim((string) ($row['existing_path'] ?? ''));
+        foreach ($mediaRows as $index => $row) {
+            $type = $this->mediaTypeFromRow($row);
+            $label = $this->mediaLabelFromRow($row);
+            $externalUrl = $this->mediaExternalUrlFromRow($row);
+            $existingPath = $this->mediaExistingPathFromRow($row);
             $sortOrder = trim((string) ($row['sort_order'] ?? '0'));
+            $upload = $this->mediaUploadFromFiles($files, (int) $index);
 
-            $fileError = $files['media']['error'][$index]['upload'] ?? UPLOAD_ERR_NO_FILE;
-            $hasNewUpload = $fileError !== UPLOAD_ERR_NO_FILE;
+            $hasNewUpload = $upload['has_upload'];
             $hasExistingPath = $existingPath !== '';
             $hasExternalUrl = $externalUrl !== '';
             $hasAnySource = $hasNewUpload || $hasExistingPath || $hasExternalUrl;
@@ -352,8 +352,9 @@ final class PoiController
                 $errors[] = 'Pořadí média musí být číslo.';
             }
 
-            if (($hasNewUpload && $hasExternalUrl) || ($hasExistingPath !== false && $hasExistingPath && $hasExternalUrl)) {
+            if (($hasNewUpload && $hasExternalUrl) || ($hasNewUpload && $hasExistingPath) || ($hasExistingPath && $hasExternalUrl)) {
                 $errors[] = 'U jednoho média použij buď soubor, nebo externí URL.';
+                continue;
             }
 
             if (!$hasAnySource) {
@@ -361,31 +362,49 @@ final class PoiController
                 continue;
             }
 
-            if ($hasExternalUrl && filter_var($externalUrl, FILTER_VALIDATE_URL) === false) {
-                $errors[] = 'Externí URL média není platná.';
+            if ($type === 'video' && $hasNewUpload) {
+                $errors[] = 'U videa použij externí URL, ne upload souboru.';
+                continue;
             }
 
-            if ($hasNewUpload && $fileError !== UPLOAD_ERR_OK) {
-                $errors[] = 'Nahrání média selhalo.';
+            if ($hasExternalUrl && filter_var($externalUrl, FILTER_VALIDATE_URL) === false) {
+                $errors[] = 'Externí URL média není platná.';
+                continue;
+            }
+
+            if ($type === 'video' && $hasExternalUrl && !$this->isYoutubeUrl($externalUrl)) {
+                $errors[] = 'U videa použij platnou YouTube URL.';
                 continue;
             }
 
             if ($hasNewUpload) {
-                $tmpName = $files['media']['tmp_name'][$index]['upload'] ?? null;
+                $fileError = $upload['error'];
+
+                if ($fileError !== UPLOAD_ERR_OK) {
+                    $errors[] = 'Nahrání média selhalo.';
+                    continue;
+                }
+
+                $tmpName = $upload['tmp_name'];
                 if (!$tmpName || !is_uploaded_file($tmpName)) {
                     $errors[] = 'Dočasný soubor média nebyl nalezen.';
                     continue;
                 }
 
-                $detectedMime = mime_content_type($tmpName) ?: '';
-                $allowedMimes = [
-                    'image' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-                    'video' => ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
-                    'audio' => ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/webm'],
-                ];
+                if ($type === 'image') {
+                    $detectedMime = mime_content_type($tmpName) ?: '';
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                    if (!in_array($detectedMime, $allowedMimes, true)) {
+                        $errors[] = 'Soubor média neodpovídá zvolenému typu.';
+                    }
+                }
 
-                if (!in_array($detectedMime, $allowedMimes[$type] ?? [], true)) {
-                    $errors[] = 'Soubor média neodpovídá zvolenému typu.';
+                if ($type === 'audio') {
+                    $detectedMime = mime_content_type($tmpName) ?: '';
+                    $allowedMimes = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/webm'];
+                    if (!in_array($detectedMime, $allowedMimes, true)) {
+                        $errors[] = 'Soubor média neodpovídá zvolenému typu.';
+                    }
                 }
             }
         }
@@ -393,7 +412,7 @@ final class PoiController
         return $errors;
     }
 
-    private function replaceMedia(int $gameId, int $poiId, array $mediaInput, array $files): void
+    private function replaceMedia(int $gameId, int $poiId, array $mediaRows, array $files): void
     {
         $pdo = Database::connection();
         $pdo->prepare('DELETE FROM poi_media WHERE poi_id = :poi_id')->execute(['poi_id' => $poiId]);
@@ -403,15 +422,15 @@ final class PoiController
              VALUES (:poi_id, :media_type, :file_path, :external_url, :mime_type, :label, :sort_order, NOW())'
         );
 
-        foreach ($mediaInput as $index => $row) {
-            $type = trim((string) ($row['media_type'] ?? ''));
-            $label = trim((string) ($row['label'] ?? ''));
-            $externalUrl = trim((string) ($row['external_url'] ?? ''));
-            $existingPath = trim((string) ($row['existing_path'] ?? ''));
+        foreach ($mediaRows as $index => $row) {
+            $type = $this->mediaTypeFromRow($row);
+            $label = $this->mediaLabelFromRow($row);
+            $externalUrl = $this->mediaExternalUrlFromRow($row);
+            $existingPath = $this->mediaExistingPathFromRow($row);
             $sortOrder = (int) ($row['sort_order'] ?? 0);
 
-            $fileError = $files['media']['error'][$index]['upload'] ?? UPLOAD_ERR_NO_FILE;
-            $hasNewUpload = $fileError !== UPLOAD_ERR_NO_FILE;
+            $upload = $this->mediaUploadFromFiles($files, (int) $index);
+            $hasNewUpload = $upload['has_upload'];
             $filePath = null;
             $mimeType = null;
 
@@ -424,8 +443,8 @@ final class PoiController
             }
 
             if ($hasNewUpload) {
-                $tmpName = $files['media']['tmp_name'][$index]['upload'];
-                $originalName = (string) ($files['media']['name'][$index]['upload'] ?? 'file');
+                $tmpName = $upload['tmp_name'];
+                $originalName = (string) ($upload['name'] ?? 'file');
                 $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
                 $safeExtension = preg_replace('~[^a-z0-9]+~', '', $extension) ?: 'bin';
@@ -456,7 +475,7 @@ final class PoiController
 
             $insertStmt->execute([
                 'poi_id' => $poiId,
-                'media_type' => $type,
+                'media_type' => $type !== '' ? $type : 'image',
                 'file_path' => $filePath,
                 'external_url' => $externalUrl !== '' ? $externalUrl : null,
                 'mime_type' => $mimeType,
@@ -480,5 +499,72 @@ final class PoiController
         $stmt->execute(['poi_id' => $poiId]);
 
         return $stmt->fetchAll();
+    }
+
+    private function mediaTypeFromRow(array $row): string
+    {
+        return trim((string) ($row['media_type'] ?? ''));
+    }
+
+    private function mediaLabelFromRow(array $row): string
+    {
+        return trim((string) ($row['label'] ?? ($row['title'] ?? '')));
+    }
+
+    private function mediaExternalUrlFromRow(array $row): string
+    {
+        return trim((string) ($row['external_url'] ?? ($row['file_path'] ?? '')));
+    }
+
+    private function mediaExistingPathFromRow(array $row): string
+    {
+        return trim((string) ($row['existing_path'] ?? ''));
+    }
+
+    private function mediaUploadFromFiles(array $files, int $index): array
+    {
+        if (isset($files['media']['error'][$index]['upload'])) {
+            $error = (int) ($files['media']['error'][$index]['upload'] ?? UPLOAD_ERR_NO_FILE);
+            return [
+                'has_upload' => $error !== UPLOAD_ERR_NO_FILE,
+                'error' => $error,
+                'tmp_name' => $files['media']['tmp_name'][$index]['upload'] ?? null,
+                'name' => $files['media']['name'][$index]['upload'] ?? null,
+            ];
+        }
+
+        $flatKey = 'media_file_' . $index;
+        if (isset($files[$flatKey])) {
+            $error = (int) ($files[$flatKey]['error'] ?? UPLOAD_ERR_NO_FILE);
+            return [
+                'has_upload' => $error !== UPLOAD_ERR_NO_FILE,
+                'error' => $error,
+                'tmp_name' => $files[$flatKey]['tmp_name'] ?? null,
+                'name' => $files[$flatKey]['name'] ?? null,
+            ];
+        }
+
+        return [
+            'has_upload' => false,
+            'error' => UPLOAD_ERR_NO_FILE,
+            'tmp_name' => null,
+            'name' => null,
+        ];
+    }
+
+    private function isYoutubeUrl(string $url): bool
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        if ($host === '') {
+            return false;
+        }
+
+        return in_array($host, [
+            'youtube.com',
+            'www.youtube.com',
+            'm.youtube.com',
+            'youtu.be',
+            'www.youtu.be',
+        ], true);
     }
 }
