@@ -432,273 +432,20 @@
                 font-size: 13px;
             }
         }
-        .player-help-panels {
-    margin-top: 18px;
-    display: grid;
-    gap: 12px;
-}
-
-.player-help-card {
-    background: rgba(255,255,255,0.82);
-    border: 1px solid rgba(80,60,35,0.12);
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.player-help-card summary {
-    cursor: pointer;
-    padding: 14px 16px;
-    font-weight: 700;
-    font-size: 16px;
-    list-style: none;
-    user-select: none;
-}
-
-.player-help-card summary::-webkit-details-marker {
-    display: none;
-}
-
-.player-help-card[open] summary {
-    border-bottom: 1px solid rgba(80,60,35,0.10);
-}
-
-.help-section {
-    padding: 14px 16px 16px;
-}
-
-.help-block + .help-block {
-    margin-top: 14px;
-}
-
-.help-block h3 {
-    margin: 0 0 8px;
-    font-size: 15px;
-    color: rgba(30,25,20,0.9);
-}
-
-.help-block p,
-.help-block li {
-    font-size: 14px;
-    line-height: 1.5;
-    color: rgba(20,20,20,0.82);
-}
-
-.help-block ul,
-.help-block ol {
-    margin: 8px 0 0 18px;
-    padding: 0;
-}
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <?php require __DIR__ . '/partials/map_shell.php'; ?>
 
-    <div class="ui-overlay">
-        <div class="ui-box player-box" onclick="openPlayerCard()">
-            <div class="player-name"><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></div>
-            <div id="status" class="player-subline">Zjišťuji polohu…</div>
-        </div>
+    <?php require __DIR__ . '/partials/player_modal.php'; ?>
 
-        <div class="ui-box context-box" onclick="openResultsModal()">
-            <div class="context-icon">📋</div>
-            <div class="context-subline">Výsledky</div>
-        </div>
-    </div>
+    <?php require __DIR__ . '/partials/results_modal.php'; ?>
 
-    <div id="accuracy-warn" class="accuracy-warn">Slabý signál GPS</div>
+    <?php require __DIR__ . '/partials/explore_choice_modal.php'; ?>
 
-    <div id="explorePanel" class="explore-panel" style="display:none;">
-        <div class="explore-card">
-            <div id="exploreTitle" class="explore-title">Místo je dost blízko na průzkum.</div>
-            <div id="exploreSubline" class="explore-subline">Jsi v oblasti, kde můžeš něco objevit.</div>
-            <div class="explore-actions">
-                <button id="exploreBtn" class="explore-btn" style="background:#1565c0; color:#fff;" onclick="exploreNearby()">Prozkoumat okolí</button>
-                <button class="explore-btn" style="background:#eceff1; color:#263238;" onclick="hideExplorePanel()">Teď ne</button>
-            </div>
-        </div>
-    </div>
+    <?php require __DIR__ . '/partials/help_modal.php'; ?>
 
-    <div id="playerModal" class="modal">
-        <div class="modal-content glass-modal">
-            <h2><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></h2>
-            <div class="player-card-note">
-                Tvoje karta hráče, body, úkoly a přehled postupu ve hře.
-            </div>
-
-            <div class="player-card-grid">
-                <div class="player-stat">
-                    <div class="player-stat-label">Body</div>
-                    <div class="player-stat-value" id="playerPoints"><?= (int) ($playerStats['points'] ?? 0) ?></div>
-                </div>
-                <div class="player-stat">
-                    <div class="player-stat-label">Pořadí</div>
-                    <div class="player-stat-value" id="playerRank">#<?= (int) ($playerStats['rank'] ?? 0) ?></div>
-                </div>
-                <div class="player-stat">
-                    <div class="player-stat-label">Poklady</div>
-                    <div class="player-stat-value" id="playerTreasures"><?= (int) ($playerStats['treasures_found'] ?? 0) ?></div>
-                </div>
-                <div class="player-stat">
-                    <div class="player-stat-label">Úkoly hotovo</div>
-                    <div class="player-stat-value" id="playerTasksDone"><?= (int) ($playerStats['tasks_done'] ?? 0) ?></div>
-                </div>
-                <div class="player-stat">
-                    <div class="player-stat-label">Úkolů celkem</div>
-                    <div class="player-stat-value" id="playerTasksTotal"><?= (int) ($playerStats['tasks_total'] ?? 0) ?></div>
-                </div>
-                <div class="player-stat">
-                    <div class="player-stat-label">Stav GPS</div>
-                    <div class="player-stat-value" id="playerGpsState">…</div>
-                </div>
-            </div>
-
-            <div class="player-progress">
-                <div class="player-progress-top">
-                    <span>Progress hry</span>
-                    <span id="playerProgressLabel"><?= (int) ($playerStats['progress_percent'] ?? 0) ?> %</span>
-                </div>
-                <div class="progress-track">
-                    <div id="playerProgressFill" class="progress-fill" style="width: <?= (int) ($playerStats['progress_percent'] ?? 0) ?>%;"></div>
-                </div>
-            </div>
-
-            <div class="modal-btns">
-                <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="openResultsFromPlayerCard()">Výsledovka</button>
-                <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="openHelpFromPlayerCard()">SOS / Pomoc</button>
-                <button class="modal-btn" style="background:#eee;" onclick="closePlayerCard()">Zavřít</button>
-            </div>
-
-<div class="player-help-panels">
-    <details class="player-help-card">
-        <summary>Jak se hraje</summary>
-        <div class="help-section">
-            <?php require __DIR__ . '/partials/general_help.php'; ?>
-        </div>
-    </details>
-
-    <details class="player-help-card">
-        <summary>O této hře</summary>
-        <div class="help-section">
-            <?php if (!empty($game['intro_text'])): ?>
-                <div class="help-block">
-                    <h3>Úvod</h3>
-                    <p><?= nl2br(htmlspecialchars($game['intro_text'], ENT_QUOTES, 'UTF-8')) ?></p>
-                </div>
-            <?php endif; ?>
-
-            <?php if (!empty($game['objective_text'])): ?>
-                <div class="help-block">
-                    <h3>Cíl hry</h3>
-                    <p><?= nl2br(htmlspecialchars($game['objective_text'], ENT_QUOTES, 'UTF-8')) ?></p>
-                </div>
-            <?php endif; ?>
-
-            <?php if (!empty($game['player_guide_text'])): ?>
-                <div class="help-block">
-                    <h3>Další instrukce</h3>
-                    <p><?= nl2br(htmlspecialchars($game['player_guide_text'], ENT_QUOTES, 'UTF-8')) ?></p>
-                </div>
-            <?php endif; ?>
-
-            <?php if (empty($game['intro_text']) && empty($game['objective_text']) && empty($game['player_guide_text'])): ?>
-                <div class="help-block">
-                    <p>Tato hra zatím nemá vyplněný vlastní briefing.</p>
-                </div>
-            <?php endif; ?>
-        </div>
-    </details>
-</div>
-    </div>
-</div>
-
-    <div id="resultsModal" class="modal">
-        <div class="modal-content glass-modal">
-            <h2>Výsledovka</h2>
-
-            <div class="results-summary">
-                <div class="results-box">
-                    <div class="results-label">Tvoje body</div>
-                    <div class="results-value" id="resultsMyPoints"><?= (int) ($playerStats['points'] ?? 0) ?></div>
-                </div>
-                <div class="results-box">
-                    <div class="results-label">Pořadí</div>
-                    <div class="results-value" id="resultsMyRank">#<?= (int) ($playerStats['rank'] ?? 0) ?></div>
-                </div>
-                <div class="results-box">
-                    <div class="results-label">Poklady</div>
-                    <div class="results-value" id="resultsMyTreasures"><?= (int) ($playerStats['treasures_found'] ?? 0) ?></div>
-                </div>
-            </div>
-
-            <table class="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Hráč</th>
-                        <th>Body</th>
-                        <th>Poklady</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($leaderboard as $row): ?>
-                        <tr class="<?= (int) $row['player_id'] === (int) $player['id'] ? 'leaderboard-highlight' : '' ?>">
-                            <td>#<?= (int) $row['rank'] ?></td>
-                            <td><?= htmlspecialchars($row['nickname'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= (int) $row['points'] ?></td>
-                            <td><?= (int) $row['treasures_found'] ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-
-            <div class="modal-btns" style="margin-top:16px;">
-                <button class="modal-btn" style="background:#eee;" onclick="closeResultsModal()">Zavřít</button>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="exploreChoiceModal" class="modal">
-        <div class="modal-content glass-modal">
-            <h2>V okolí je více míst k průzkumu</h2>
-            <div class="player-card-note">Vyber, čemu se chceš věnovat právě teď.</div>
-            <div id="exploreChoiceList" class="explore-list"></div>
-            <div class="modal-btns" style="margin-top:16px;">
-                <button class="modal-btn" style="background:#eee;" onclick="closeExploreChoiceModal()">Zavřít</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="helpModal" class="modal">
-        <div class="modal-content">
-            <h2>Žádost o pomoc</h2>
-            <p>Potřebujete pomoc organizátora nebo týmu?</p>
-            <textarea id="helpMsg" placeholder="Napište, co se děje (např. zranění, ztráta orientace...)"></textarea>
-            <div class="modal-btns">
-                <button class="modal-btn" style="background:#eee;" onclick="closeHelp()">ZRUŠIT</button>
-                <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="sendHelp()">ODESLAT POMOC</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="poiModal" class="modal">
-        <div class="modal-content">
-            <h2 id="poiTitle">Detail</h2>
-            <div id="poiType" class="poi-type" style="display:none;"></div>
-            <div id="poiMeta" class="poi-meta"></div>
-            <div id="poiMedia" class="poi-media"></div>
-            <div id="poiText" class="poi-text"></div>
-            <div class="modal-btns">
-                <button id="speechPlayBtn" class="modal-btn" style="background:#1976d2; color:#fff;" onclick="speakCurrentText()">PŘEČÍST NAHLAS</button>
-                <button id="speechPauseBtn" class="modal-btn" style="background:#f57c00; color:#fff; display:none;" onclick="pauseSpeech()">POZASTAVIT</button>
-                <button id="speechResumeBtn" class="modal-btn" style="background:#388e3c; color:#fff; display:none;" onclick="resumeSpeech()">POKRAČOVAT</button>
-                <button id="speechStopBtn" class="modal-btn" style="background:#757575; color:#fff; display:none;" onclick="stopSpeech()">ZASTAVIT</button>
-                <button id="completePoiBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="completeCurrentPoi()">POTVRDIT PRŮZKUM</button>
-                <button id="claimBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="claimCurrentTreasure()">SEBRAT POKLAD</button>
-                <button class="modal-btn" style="background:#eee;" onclick="closePoiModal()">ZAVŘÍT</button>
-            </div>
-        </div>
-    </div>
+    <?php require __DIR__ . '/partials/poi_modal.php'; ?>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -725,7 +472,6 @@
         let exploreCandidates = [];
         let currentDetail = null;
         let speechUtterance = null;
-        let speechState = 'idle'; // idle | speaking | paused
 
         function escapeHtml(str) {
             return String(str ?? '')
@@ -953,8 +699,6 @@
         }
 
         function openPoiDetail(poi) {
-            stopSpeech(true);
-
             currentDetail = {
                 kind: 'poi',
                 id: Number(poi.id),
@@ -988,8 +732,6 @@
         }
 
         function openTreasureDetail(treasure) {
-            stopSpeech(true);
-
             currentDetail = {
                 kind: 'treasure',
                 id: Number(treasure.id),
@@ -1038,46 +780,8 @@
         }
 
         function closePoiModal() {
-            stopSpeech(true);
+            stopSpeech();
             document.getElementById('poiModal').style.display = 'none';
-        }
-
-        function updateSpeechButtons() {
-            const playBtn = document.getElementById('speechPlayBtn');
-            const pauseBtn = document.getElementById('speechPauseBtn');
-            const resumeBtn = document.getElementById('speechResumeBtn');
-            const stopBtn = document.getElementById('speechStopBtn');
-
-            if (!playBtn || !pauseBtn || !resumeBtn || !stopBtn) {
-                return;
-            }
-
-            if (speechState === 'speaking') {
-                playBtn.style.display = 'none';
-                pauseBtn.style.display = 'inline-block';
-                resumeBtn.style.display = 'none';
-                stopBtn.style.display = 'inline-block';
-                return;
-            }
-
-            if (speechState === 'paused') {
-                playBtn.style.display = 'none';
-                pauseBtn.style.display = 'none';
-                resumeBtn.style.display = 'inline-block';
-                stopBtn.style.display = 'inline-block';
-                return;
-            }
-
-            playBtn.style.display = 'inline-block';
-            pauseBtn.style.display = 'none';
-            resumeBtn.style.display = 'none';
-            stopBtn.style.display = 'none';
-        }
-
-        function resetSpeechState() {
-            speechUtterance = null;
-            speechState = 'idle';
-            updateSpeechButtons();
         }
 
         function speakCurrentText() {
@@ -1085,65 +789,22 @@
                 return;
             }
 
+            stopSpeech();
+
             if (!('speechSynthesis' in window)) {
                 alert('Tento prohlížeč nepodporuje hlasové čtení.');
                 return;
             }
 
-            stopSpeech(true);
-
             speechUtterance = new SpeechSynthesisUtterance(currentDetail.text);
             speechUtterance.lang = 'cs-CZ';
-            speechUtterance.onstart = function () {
-                speechState = 'speaking';
-                updateSpeechButtons();
-            };
-            speechUtterance.onend = function () {
-                resetSpeechState();
-            };
-            speechUtterance.onerror = function () {
-                resetSpeechState();
-            };
-
             window.speechSynthesis.speak(speechUtterance);
-            speechState = 'speaking';
-            updateSpeechButtons();
         }
 
-        function pauseSpeech() {
-            if (!('speechSynthesis' in window)) {
-                return;
-            }
-
-            if (speechState !== 'speaking') {
-                return;
-            }
-
-            window.speechSynthesis.pause();
-            speechState = 'paused';
-            updateSpeechButtons();
-        }
-
-        function resumeSpeech() {
-            if (!('speechSynthesis' in window)) {
-                return;
-            }
-
-            if (speechState !== 'paused') {
-                return;
-            }
-
-            window.speechSynthesis.resume();
-            speechState = 'speaking';
-            updateSpeechButtons();
-        }
-
-        function stopSpeech(silent) {
+        function stopSpeech() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
-
-            resetSpeechState();
         }
 
         function claimCurrentTreasure() {
@@ -1184,9 +845,7 @@
 
                     closePoiModal();
                     updatePlayerCardStats();
-                    updateSpeechButtons();
-
-        reloadMapData();
+                    reloadMapData();
                     return;
                 }
 
