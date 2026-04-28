@@ -876,22 +876,9 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Poklad byl úspěšně sebrán.');
-                    initialPlayerStats.points = Number(initialPlayerStats.points || 0) + Number(currentDetail.points || 0);
-                    initialPlayerStats.treasures_found = Number(initialPlayerStats.treasures_found || 0) + 1;
-                    initialPlayerStats.tasks_done = Math.min(
-                        Number(initialPlayerStats.tasks_total || 0),
-                        Number(initialPlayerStats.tasks_done || 0) + 1
-                    );
-                    if (Number(initialPlayerStats.tasks_total || 0) > 0) {
-                        initialPlayerStats.progress_percent = Math.round(
-                            (Number(initialPlayerStats.tasks_done || 0) / Number(initialPlayerStats.tasks_total || 1)) * 100
-                        );
-                    }
-
+                    alert('Poklad byl úspěšně sebrán. Stránka se teď obnoví, aby se správně přepočítaly body i výsledovka.');
                     closePoiModal();
-                    updatePlayerCardStats();
-                    reloadMapData();
+                    window.location.reload();
                     return;
                 }
 
@@ -1068,25 +1055,16 @@
                     return;
                 }
 
-                const poi = pois.find(item => Number(item.id) === Number(currentDetail.id));
-                if (poi) {
-                    poi.visited_by_player = 1;
-                }
-
-                initialPlayerStats.tasks_done = Number(initialPlayerStats.tasks_done || 0) + (data.status === 'completed' ? 1 : 0);
-                if (Number(initialPlayerStats.tasks_total || 0) > 0) {
-                    initialPlayerStats.progress_percent = Math.round((Number(initialPlayerStats.tasks_done || 0) / Number(initialPlayerStats.tasks_total || 1)) * 100);
-                }
-
                 closePoiModal();
-                reloadMapData();
 
                 if (Array.isArray(data.unlocked_treasures) && data.unlocked_treasures.length > 0) {
                     const names = data.unlocked_treasures.map(item => item.name || 'Poklad').join(', ');
-                    alert('Průzkum dokončen. Odemčeno: ' + names);
+                    alert('Průzkum dokončen. Odemčeno: ' + names + '. Stránka se teď obnoví.');
                 } else {
-                    alert('Průzkum místa byl potvrzen.');
+                    alert('Průzkum místa byl potvrzen. Stránka se teď obnoví, aby se správně propsal stav hry.');
                 }
+
+                window.location.reload();
             })
             .catch(err => {
                 console.warn(err);
