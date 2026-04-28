@@ -112,15 +112,9 @@ Technicky:
 - nesmí se rozbít zoom
 
 ### D. Markery na mapě
-Aktuální problém:
-- hráč na mapě vypadá stejně jako POI
-- to je matoucí
-
-Budoucí oprava:
-- odlišit marker hráče od POI a treasure
-- ideálně i vizuálně odlišit aktivní cíl / checkpoint
-
-Zatím odloženo.
+- [x] odlišit marker hráče od POI a treasure
+- [x] vizuálně odlišit sebraný poklad (zašednutí)
+- [ ] ideálně i vizuálně odlišit aktivní cíl / checkpoint (zatím odloženo)
 
 ---
 

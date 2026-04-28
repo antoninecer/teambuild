@@ -148,6 +148,41 @@
             padding: 12px;
             border: none;
             border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Vlastní styly markerů */
+        .marker-user {
+            width: 20px !important;
+            height: 20px !important;
+            background: #3b82f6;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .marker-poi {
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+        }
+
+        .marker-treasure {
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+        }
+
+        .marker-treasure.claimed {
+            opacity: 0.4;
+            filter: grayscale(1) drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+
             font-weight: bold;
             cursor: pointer;
         }
@@ -603,7 +638,12 @@
             document.getElementById('accuracy-warn').style.display = (acc > 50) ? 'block' : 'none';
 
             if (!userMarker) {
-                userMarker = L.marker([lat, lon]).addTo(map);
+                const userIcon = L.divIcon({
+                    className: 'marker-user',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                userMarker = L.marker([lat, lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
                 userCircle = L.circle([lat, lon], { radius: acc, fillOpacity: 0.1 }).addTo(map);
                 map.setView([lat, lon], 16);
             } else {
@@ -646,7 +686,13 @@
 
         function renderPois() {
             pois.forEach(poi => {
-                const marker = L.marker([parseFloat(poi.lat), parseFloat(poi.lon)]).addTo(map);
+                const poiIcon = L.divIcon({
+                    className: 'marker-poi',
+                    html: '🚩',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 25]
+                });
+                const marker = L.marker([parseFloat(poi.lat), parseFloat(poi.lon)], { icon: poiIcon }).addTo(map);
                 marker.bindPopup('<strong>' + escapeHtml(poi.name) + '</strong>');
                 marker.on('click', () => openPoiDetail(poi));
                 poiMarkers.push(marker);
@@ -658,17 +704,17 @@
                 const lat = parseFloat(treasure.lat);
                 const lon = parseFloat(treasure.lon);
 
-                let label = 'Poklad';
-                if (treasure.claimed_by_player == 1 || treasure.claimed_by_team == 1) {
-                    label = 'Poklad (sebrán)';
-                }
+                const isClaimed = (treasure.claimed_by_player == 1 || treasure.claimed_by_team == 1);
+                let label = isClaimed ? 'Poklad (sebrán)' : 'Poklad';
 
-                const marker = L.circleMarker([lat, lon], {
-                    radius: 8,
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.85
-                }).addTo(map);
+                const treasureIcon = L.divIcon({
+                    className: 'marker-treasure' + (isClaimed ? ' claimed' : ''),
+                    html: '💰',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+
+                const marker = L.marker([lat, lon], { icon: treasureIcon }).addTo(map);
 
                 marker.bindPopup('<strong>' + escapeHtml(treasure.name) + '</strong><br>' + escapeHtml(label));
                 marker.on('click', () => openTreasureDetail(treasure));
