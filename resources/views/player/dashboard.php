@@ -974,13 +974,18 @@
             });
         }
 
+        function isTreasureDiscoverable(treasure) {
+            return Number(treasure.claimed_by_player || 0) !== 1
+                && Number(treasure.claimed_by_team || 0) !== 1;
+        }
+
         function hasNearbyDiscoverableContent() {
             if (!lastPos) {
                 return false;
             }
 
             const hasPoi = pois.some(poi => Number(poi.visited_by_player || 0) !== 1 && distanceMeters(lastPos.lat, lastPos.lon, Number(poi.lat), Number(poi.lon)) <= Number(poi.radius_m || 0));
-            const hasTreasure = treasures.some(treasure => distanceMeters(lastPos.lat, lastPos.lon, Number(treasure.lat), Number(treasure.lon)) <= Number(treasure.radius_m || 0));
+            const hasTreasure = treasures.some(treasure => isTreasureDiscoverable(treasure) && distanceMeters(lastPos.lat, lastPos.lon, Number(treasure.lat), Number(treasure.lon)) <= Number(treasure.radius_m || 0));
             return hasPoi || hasTreasure;
         }
 
