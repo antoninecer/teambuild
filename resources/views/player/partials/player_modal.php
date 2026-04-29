@@ -2,7 +2,10 @@
         <div class="modal-content glass-modal">
             <h2><?= htmlspecialchars($player['nickname'], ENT_QUOTES, 'UTF-8') ?></h2>
             <div class="player-card-note">
-                Tvoje karta hráče, body, úkoly a přehled postupu ve hře.
+                Hraješ: <strong><?= htmlspecialchars($game['name'] ?? 'Aktuální hra', ENT_QUOTES, 'UTF-8') ?></strong>
+                <?php if (!empty($game['objective_text'])): ?>
+                    <br><?= htmlspecialchars(mb_strimwidth((string) $game['objective_text'], 0, 150, '…'), ENT_QUOTES, 'UTF-8') ?>
+                <?php endif; ?>
             </div>
 
             <div class="player-card-grid">
@@ -44,9 +47,8 @@
 
             <div class="modal-btns">
                 <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="openResultsFromPlayerCard()">Výsledovka</button>
-                <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="openHelpFromPlayerCard()">SOS / Pomoc</button>
+                <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="openHelpFromPlayerCard()">Nemohu pokračovat</button>
                 <button class="modal-btn" style="background:#eee;" onclick="closePlayerCard()">Zavřít</button>
             </div>
         </div>
     </div>
-
