@@ -6,11 +6,6 @@
             <div class="player-subline" style="font-weight:600; margin-bottom:4px;">
                 <?= htmlspecialchars($game['name'] ?? 'Aktuální hra', ENT_QUOTES, 'UTF-8') ?>
             </div>
-            <?php if (!empty($game['objective_text'])): ?>
-                <div class="player-subline" style="margin-bottom:4px;">
-                    <?= htmlspecialchars(mb_strimwidth((string) $game['objective_text'], 0, 90, '…'), ENT_QUOTES, 'UTF-8') ?>
-                </div>
-            <?php endif; ?>
             <div id="status" class="player-subline">Zjišťuji polohu…</div>
         </div>
 
