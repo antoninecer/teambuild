@@ -45,6 +45,47 @@
                 </div>
             </div>
 
+            <div class="player-help-panels">
+                <details class="player-help-card">
+                    <summary>Jak se hraje</summary>
+                    <div class="help-section">
+                        <?php require __DIR__ . '/general_help.php'; ?>
+                    </div>
+                </details>
+
+                <details class="player-help-card">
+                    <summary>O této hře</summary>
+                    <div class="help-section">
+                        <?php if (!empty($game['intro_text'])): ?>
+                            <div class="help-block">
+                                <h3>Úvod</h3>
+                                <p><?= nl2br(htmlspecialchars($game['intro_text'], ENT_QUOTES, 'UTF-8')) ?></p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($game['objective_text'])): ?>
+                            <div class="help-block">
+                                <h3>Cíl hry</h3>
+                                <p><?= nl2br(htmlspecialchars($game['objective_text'], ENT_QUOTES, 'UTF-8')) ?></p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($game['player_guide_text'])): ?>
+                            <div class="help-block">
+                                <h3>Další instrukce</h3>
+                                <p><?= nl2br(htmlspecialchars($game['player_guide_text'], ENT_QUOTES, 'UTF-8')) ?></p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (empty($game['intro_text']) && empty($game['objective_text']) && empty($game['player_guide_text'])): ?>
+                            <div class="help-block">
+                                <p>Tato hra zatím nemá vyplněný vlastní briefing.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            </div>
+
             <div class="modal-btns">
                 <button class="modal-btn" style="background:#1976d2; color:#fff;" onclick="openResultsFromPlayerCard()">Výsledovka</button>
                 <button class="modal-btn" style="background:#d32f2f; color:#fff;" onclick="openHelpFromPlayerCard()">Nemohu pokračovat</button>

@@ -615,9 +615,14 @@ public function updateLocation(): void
         $leaderboard = $this->buildLeaderboard($gameId);
 
         $rank = 0;
+        $lastCheckpoint = null;
+        $lastProgressAt = null;
+
         foreach ($leaderboard as $row) {
             if ((int) $row['player_id'] === $playerId) {
                 $rank = (int) $row['rank'];
+                $lastCheckpoint = $row['last_checkpoint'] ?? null;
+                $lastProgressAt = $row['last_progress_at'] ?? null;
                 break;
             }
         }
@@ -639,6 +644,8 @@ public function updateLocation(): void
             'tasks_done' => $tasksDone,
             'progress_percent' => $progressPercent,
             'rank' => $rank,
+            'last_checkpoint' => $lastCheckpoint,
+            'last_progress_at' => $lastProgressAt,
         ];
     }
 
@@ -658,7 +665,26 @@ public function updateLocation(): void
                     WHERE e.game_id = :game_id
                       AND e.player_id = p.id
                       AND e.event_type = :event_type
-                ) AS pois_visited
+                ) AS pois_visited,
+                (
+                    SELECT poi.name
+                    FROM events e2
+                    INNER JOIN pois poi ON poi.id = e2.poi_id
+                    WHERE e2.game_id = :game_id
+                      AND e2.player_id = p.id
+                      AND e2.event_type = :event_type
+                    ORDER BY e2.created_at DESC, e2.id DESC
+                    LIMIT 1
+                ) AS last_checkpoint,
+                (
+                    SELECT e3.created_at
+                    FROM events e3
+                    WHERE e3.game_id = :game_id
+                      AND e3.player_id = p.id
+                      AND e3.event_type = :event_type
+                    ORDER BY e3.created_at DESC, e3.id DESC
+                    LIMIT 1
+                ) AS last_progress_at
              FROM players p
              LEFT JOIN treasure_claims tc
                 ON tc.player_id = p.id
@@ -679,6 +705,13 @@ public function updateLocation(): void
         $rank = 1;
         foreach ($rows as &$row) {
             $row['rank'] = $rank++;
+            $row['player_id'] = (int) $row['player_id'];
+            $row['points'] = (int) $row['points'];
+            $row['treasures_found'] = (int) $row['treasures_found'];
+            $row['pois_visited'] = (int) $row['pois_visited'];
+            $row['nickname'] = (string) $row['nickname'];
+            $row['last_checkpoint'] = $row['last_checkpoint'] !== null ? (string) $row['last_checkpoint'] : null;
+            $row['last_progress_at'] = $row['last_progress_at'] !== null ? (string) $row['last_progress_at'] : null;
         }
         unset($row);
 

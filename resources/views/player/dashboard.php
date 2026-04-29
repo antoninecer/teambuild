@@ -359,6 +359,72 @@
             color: rgba(15,15,15,0.92);
         }
 
+        .results-value-small {
+            font-size: 15px;
+            line-height: 1.25;
+        }
+
+        .results-box-wide {
+            grid-column: span 2;
+        }
+
+        .player-help-panels {
+            margin: 18px 0;
+            display: grid;
+            gap: 12px;
+        }
+
+        .player-help-card {
+            background: rgba(255,255,255,0.82);
+            border: 1px solid rgba(80,60,35,0.12);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .player-help-card summary {
+            cursor: pointer;
+            padding: 14px 16px;
+            font-weight: 700;
+            font-size: 16px;
+            list-style: none;
+            user-select: none;
+        }
+
+        .player-help-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .player-help-card[open] summary {
+            border-bottom: 1px solid rgba(80,60,35,0.10);
+        }
+
+        .help-section {
+            padding: 14px 16px 16px;
+        }
+
+        .help-block + .help-block {
+            margin-top: 14px;
+        }
+
+        .help-block h3 {
+            margin: 0 0 8px;
+            font-size: 15px;
+            color: rgba(30,25,20,0.9);
+        }
+
+        .help-block p,
+        .help-block li {
+            font-size: 14px;
+            line-height: 1.5;
+            color: rgba(20,20,20,0.82);
+        }
+
+        .help-block ul,
+        .help-block ol {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+
         .explore-panel {
             position: absolute;
             left: 10px;
@@ -625,7 +691,9 @@
 
             document.getElementById('resultsMyPoints').innerText = String(initialPlayerStats.points || 0);
             document.getElementById('resultsMyRank').innerText = '#' + String(initialPlayerStats.rank || 0);
+            document.getElementById('resultsMyPois').innerText = String(initialPlayerStats.pois_visited || 0);
             document.getElementById('resultsMyTreasures').innerText = String(initialPlayerStats.treasures_found || 0);
+            document.getElementById('resultsMyLastPoi').innerText = String(initialPlayerStats.last_checkpoint || '—');
         }
 
         function updateLocation(pos) {

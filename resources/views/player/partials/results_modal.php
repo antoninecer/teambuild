@@ -12,8 +12,18 @@
                     <div class="results-value" id="resultsMyRank">#<?= (int) ($playerStats['rank'] ?? 0) ?></div>
                 </div>
                 <div class="results-box">
+                    <div class="results-label">POI navštíveno</div>
+                    <div class="results-value" id="resultsMyPois"><?= (int) ($playerStats['pois_visited'] ?? 0) ?></div>
+                </div>
+                <div class="results-box">
                     <div class="results-label">Poklady</div>
                     <div class="results-value" id="resultsMyTreasures"><?= (int) ($playerStats['treasures_found'] ?? 0) ?></div>
+                </div>
+                <div class="results-box results-box-wide">
+                    <div class="results-label">Naposledy navštíveno</div>
+                    <div class="results-value results-value-small" id="resultsMyLastPoi">
+                        <?= htmlspecialchars((string) ($playerStats['last_checkpoint'] ?? '—'), ENT_QUOTES, 'UTF-8') ?>
+                    </div>
                 </div>
             </div>
 
@@ -23,7 +33,9 @@
                         <th>#</th>
                         <th>Hráč</th>
                         <th>Body</th>
+                        <th>POI</th>
                         <th>Poklady</th>
+                        <th>Naposledy</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,7 +44,14 @@
                             <td>#<?= (int) $row['rank'] ?></td>
                             <td><?= htmlspecialchars($row['nickname'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= (int) $row['points'] ?></td>
+                            <td><?= (int) ($row['pois_visited'] ?? 0) ?></td>
                             <td><?= (int) $row['treasures_found'] ?></td>
+                            <td>
+                                <strong><?= htmlspecialchars((string) ($row['last_checkpoint'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></strong>
+                                <?php if (!empty($row['last_progress_at'])): ?>
+                                    <br><small><?= htmlspecialchars((string) $row['last_progress_at'], ENT_QUOTES, 'UTF-8') ?></small>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -43,5 +62,3 @@
             </div>
         </div>
     </div>
-
-

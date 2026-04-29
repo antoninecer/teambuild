@@ -15,7 +15,33 @@ $leaderboardStmt = $pdo->prepare(
         p.last_lat,
         p.last_lon,
         COALESCE(SUM(COALESCE(t.points, 0)), 0) AS points,
-        COUNT(t.id) AS treasures_found
+        COUNT(t.id) AS treasures_found,
+        (
+            SELECT COUNT(*)
+            FROM events e
+            WHERE e.game_id = :game_id
+              AND e.player_id = p.id
+              AND e.event_type = :poi_event
+        ) AS pois_visited,
+        (
+            SELECT poi.name
+            FROM events e2
+            INNER JOIN pois poi ON poi.id = e2.poi_id
+            WHERE e2.game_id = :game_id
+              AND e2.player_id = p.id
+              AND e2.event_type = :poi_event
+            ORDER BY e2.created_at DESC, e2.id DESC
+            LIMIT 1
+        ) AS last_checkpoint,
+        (
+            SELECT e3.created_at
+            FROM events e3
+            WHERE e3.game_id = :game_id
+              AND e3.player_id = p.id
+              AND e3.event_type = :poi_event
+            ORDER BY e3.created_at DESC, e3.id DESC
+            LIMIT 1
+        ) AS last_progress_at
      FROM players p
      LEFT JOIN treasure_claims tc
         ON tc.player_id = p.id
@@ -24,14 +50,22 @@ $leaderboardStmt = $pdo->prepare(
        AND t.game_id = :game_id
      WHERE p.game_id = :game_id
      GROUP BY p.id, p.nickname, p.last_seen_at, p.last_lat, p.last_lon
-     ORDER BY points DESC, treasures_found DESC, p.nickname ASC'
+     ORDER BY points DESC, treasures_found DESC, pois_visited DESC, p.nickname ASC'
 );
-$leaderboardStmt->execute(['game_id' => (int) $game['id']]);
+$leaderboardStmt->execute([
+    'game_id' => (int) $game['id'],
+    'poi_event' => 'poi_visited',
+]);
 $leaderboardRows = $leaderboardStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
 $rank = 1;
 foreach ($leaderboardRows as &$row) {
     $row['rank'] = $rank++;
+    $row['points'] = (int) $row['points'];
+    $row['treasures_found'] = (int) $row['treasures_found'];
+    $row['pois_visited'] = (int) ($row['pois_visited'] ?? 0);
+    $row['last_checkpoint'] = $row['last_checkpoint'] !== null ? (string) $row['last_checkpoint'] : null;
+    $row['last_progress_at'] = $row['last_progress_at'] !== null ? (string) $row['last_progress_at'] : null;
 }
 unset($row);
 
@@ -310,6 +344,8 @@ $scoreboardQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&dat
                     <th>Hráč</th>
                     <th>Body</th>
                     <th>Poklady</th>
+                    <th>POI</th>
+                    <th>Naposledy navštíveno</th>
                     <th>Poslední poloha</th>
                     <th>Akce</th>
                 </tr>
@@ -317,7 +353,7 @@ $scoreboardQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&dat
             <tbody>
                 <?php if ($leaderboardRows === []): ?>
                     <tr>
-                        <td colspan="6">Zatím nejsou žádná data.</td>
+                        <td colspan="8">Zatím nejsou žádná data.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($leaderboardRows as $row): ?>
@@ -328,6 +364,13 @@ $scoreboardQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&dat
                             </td>
                             <td><?= (int) $row['points'] ?></td>
                             <td><?= (int) $row['treasures_found'] ?></td>
+                            <td><?= (int) ($row['pois_visited'] ?? 0) ?></td>
+                            <td>
+                                <strong><?= htmlspecialchars((string) ($row['last_checkpoint'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></strong>
+                                <?php if (!empty($row['last_progress_at'])): ?>
+                                    <br><small><?= htmlspecialchars((string) $row['last_progress_at'], ENT_QUOTES, 'UTF-8') ?></small>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?php if ($row['last_seen_at']): ?>
                                     <div style="font-size: 12px; color: var(--ink-soft);">
