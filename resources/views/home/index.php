@@ -209,6 +209,36 @@
             text-shadow: 0 1px 8px rgba(0,0,0,0.3);
         }
 
+        .contact-card {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.45);
+            text-align: center;
+        }
+
+        .contact-card h2 {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .contact-card p {
+            margin: 0;
+            font-size: 17px;
+            line-height: 1.6;
+            color: var(--ink-soft);
+        }
+
+        .contact-link {
+            color: var(--accent);
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 2px solid rgba(108, 67, 34, 0.3);
+            transition: border-color 0.12s ease;
+        }
+
+        .contact-link:hover {
+            border-bottom-color: var(--accent);
+        }
+
         @media (max-width: 900px) {
             .cards {
                 grid-template-columns: 1fr;
@@ -285,6 +315,14 @@
                     Vstup do administrace je oddělený od hráčské části.
                     Hráč se připojuje do konkrétní hry, správce vstupuje sem.
                 </div>
+            </section>
+
+            <section class="card contact-card">
+                <h2>Chcete zorganizovat vlastní hru?</h2>
+                <p>
+                    Pokud budete chtít zorganizovat mapovou hru pro svůj tým, školu nebo přátele, neváhejte nás kontaktovat na 
+                    <a href="mailto:antonin.ecer@rightdone.eu" class="contact-link">antonin.ecer@rightdone.eu</a>.
+                </p>
             </section>
         </div>
 

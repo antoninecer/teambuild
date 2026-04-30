@@ -54,6 +54,10 @@ Datum: průběžný pracovní souhrn po poslední sérii oprav
 - Opraven bug s výsledovkou vnořenou do špatného modalu.
 - Výsledovka už není skrytá uvnitř jiného okna po kliknutí.
 
+### Ostatní
+- Přidány kontaktní informace na úvodní stránku (možnost zorganizovat vlastní hru).
+- Kontakt na antonin.ecer@rightdone.eu je viditelný pro všechny návštěvníky.
+
 ---
 
 ## 2. Co je rozdělané nebo k dočištění

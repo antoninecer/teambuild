@@ -218,6 +218,12 @@ final class TreasureController
         $points = trim($input['points'] ?? '0');
         $isEnabled = isset($input['is_enabled']) ? 1 : 0;
 
+        $findsMode = trim($input['finds_mode'] ?? 'log_entry');
+        $weightGrams = trim($input['weight_grams'] ?? '0');
+        $dropAllowed = isset($input['drop_allowed']) ? 1 : 0;
+        $publicDropAllowed = isset($input['public_drop_allowed']) ? 1 : 0;
+        $hiddenDropAllowed = isset($input['hidden_drop_allowed']) ? 1 : 0;
+
         $errors = [];
 
         if ($name === '') {
@@ -249,6 +255,37 @@ final class TreasureController
             $errors[] = 'Body musí být číslo.';
         }
 
+        $allowedFindsModes = ['log_entry', 'inventory_item'];
+        if (!in_array($findsMode, $allowedFindsModes, true)) {
+            $errors[] = 'Neplatný typ nálezu.';
+        }
+
+        if ($weightGrams === '') {
+            $weightGrams = '0';
+        }
+
+        if (!ctype_digit((string) $weightGrams)) {
+            $errors[] = 'Váha musí být nezáporné celé číslo v gramech.';
+        }
+
+        if ($treasureType === 'individual') {
+            $dropAllowed = 0;
+            $publicDropAllowed = 0;
+            $hiddenDropAllowed = 0;
+        }
+
+        if ($findsMode !== 'inventory_item') {
+            $dropAllowed = 0;
+            $publicDropAllowed = 0;
+            $hiddenDropAllowed = 0;
+            $weightGrams = '0';
+        }
+
+        if ($dropAllowed === 0) {
+            $publicDropAllowed = 0;
+            $hiddenDropAllowed = 0;
+        }
+
         return [[
             'poi_id' => $poiId !== '' ? (int) $poiId : null,
             'name' => $name,
@@ -261,6 +298,11 @@ final class TreasureController
             'max_claims' => $maxClaims !== '' ? (int) $maxClaims : null,
             'points' => (int) $points,
             'is_enabled' => $isEnabled,
+            'finds_mode' => $findsMode,
+            'drop_allowed' => $dropAllowed,
+            'public_drop_allowed' => $publicDropAllowed,
+            'hidden_drop_allowed' => $hiddenDropAllowed,
+            'weight_grams' => (int) $weightGrams,
         ], $errors];
     }
 }

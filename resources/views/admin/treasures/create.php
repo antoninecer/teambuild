@@ -100,6 +100,51 @@ require __DIR__ . '/../partials/header.php';
             </div>
         </div>
 
+
+        <div style="margin-top: 24px; border-top: 1px solid var(--line); padding-top: 20px;">
+            <h3 style="margin-top: 0;">Nález / inventář</h3>
+            <p style="color: var(--muted); margin-top: -6px;">
+                Příprava pro budoucí knihu nálezů a jednoduchý inventář. Tento krok zatím jen nastavuje hodnoty pro nový poklad.
+            </p>
+
+            <?php $findsMode = (string) ($old['finds_mode'] ?? 'log_entry'); ?>
+            <div class="form-group">
+                <label for="finds_mode">Co hráč po sebrání získá</label>
+                <select id="finds_mode" name="finds_mode">
+                    <option value="log_entry" <?= $findsMode === 'log_entry' ? 'selected' : '' ?>>Zápis do knihy nálezů</option>
+                    <option value="inventory_item" <?= $findsMode === 'inventory_item' ? 'selected' : '' ?>>Předmět do inventáře</option>
+                </select>
+            </div>
+
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="form-group">
+                    <label for="weight_grams">Váha v gramech</label>
+                    <input type="number" id="weight_grams" name="weight_grams" value="<?= htmlspecialchars((string) ($old['weight_grams'] ?? '0'), ENT_QUOTES, 'UTF-8') ?>" min="0">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin: 10px 0;">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="drop_allowed" name="drop_allowed" value="1" <?= ((int) ($old['drop_allowed'] ?? 0) === 1) ? 'checked' : '' ?>>
+                    <label for="drop_allowed">Lze odložit</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="public_drop_allowed" name="public_drop_allowed" value="1" <?= ((int) ($old['public_drop_allowed'] ?? 0) === 1) ? 'checked' : '' ?>>
+                    <label for="public_drop_allowed">Lze položit veřejně</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="hidden_drop_allowed" name="hidden_drop_allowed" value="1" <?= ((int) ($old['hidden_drop_allowed'] ?? 0) === 1) ? 'checked' : '' ?>>
+                    <label for="hidden_drop_allowed">Lze položit skrytě</label>
+                </div>
+            </div>
+
+            <p id="individualTreasureNotice" style="display: none; color: var(--muted); margin-top: 8px;">
+                U typu „Individual (každý jednou)“ bude odložení později serverově zakázané, aby se osobní nález omylem nepředával dalším hráčům.
+            </p>
+        </div>
+
         <div style="display: flex; gap: 20px; flex-wrap: wrap; margin: 20px 0;">
             <div class="checkbox-group">
                 <input type="checkbox" id="is_visible_on_map" name="is_visible_on_map" value="1" <?= array_key_exists('is_visible_on_map', $old ?? []) ? ($old['is_visible_on_map'] ? 'checked' : '') : 'checked' ?>>
@@ -155,6 +200,38 @@ require __DIR__ . '/../partials/header.php';
             marker = L.marker(e.latlng).addTo(map);
         }
     });
+
+
+    const treasureTypeInput = document.getElementById('treasure_type');
+    const dropAllowedInput = document.getElementById('drop_allowed');
+    const publicDropAllowedInput = document.getElementById('public_drop_allowed');
+    const hiddenDropAllowedInput = document.getElementById('hidden_drop_allowed');
+    const individualTreasureNotice = document.getElementById('individualTreasureNotice');
+
+    function refreshInventoryFields() {
+        const isIndividual = treasureTypeInput && treasureTypeInput.value === 'individual';
+
+        if (individualTreasureNotice) {
+            individualTreasureNotice.style.display = isIndividual ? 'block' : 'none';
+        }
+
+        [dropAllowedInput, publicDropAllowedInput, hiddenDropAllowedInput].forEach(function(input) {
+            if (!input) {
+                return;
+            }
+
+            input.disabled = isIndividual;
+
+            if (isIndividual) {
+                input.checked = false;
+            }
+        });
+    }
+
+    if (treasureTypeInput) {
+        treasureTypeInput.addEventListener('change', refreshInventoryFields);
+        refreshInventoryFields();
+    }
 </script>
 
 <?php require __DIR__ . '/../partials/footer.php'; ?>

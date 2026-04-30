@@ -26,7 +26,7 @@ final class TreasureRepository
 
         $stmt->execute(['game_id' => $gameId]);
 
-        return $stmt->fetchAll();
+        return array_map([$this, 'normalizeTreasureRow'], $stmt->fetchAll());
     }
 
     public function visibleForGameWithClaimState(int $gameId, int $playerId, ?int $teamId): array
@@ -98,7 +98,7 @@ final class TreasureRepository
 
         $stmt->execute($params);
 
-        return $stmt->fetchAll();
+        return array_map([$this, 'normalizeTreasureRow'], $stmt->fetchAll());
     }
 
     public function findById(int $id): ?array
@@ -115,7 +115,7 @@ final class TreasureRepository
         $stmt->execute(['id' => $id]);
         $treasure = $stmt->fetch();
 
-        return $treasure ?: null;
+        return $treasure ? $this->normalizeTreasureRow($treasure) : null;
     }
 
     public function create(array $data): int
@@ -135,7 +135,12 @@ final class TreasureRepository
                 is_visible_on_map,
                 max_claims,
                 points,
-                is_enabled
+                is_enabled,
+                finds_mode,
+                drop_allowed,
+                public_drop_allowed,
+                hidden_drop_allowed,
+                weight_grams
             ) VALUES (
                 :game_id,
                 :poi_id,
@@ -148,7 +153,12 @@ final class TreasureRepository
                 :is_visible_on_map,
                 :max_claims,
                 :points,
-                :is_enabled
+                :is_enabled,
+                :finds_mode,
+                :drop_allowed,
+                :public_drop_allowed,
+                :hidden_drop_allowed,
+                :weight_grams
             )'
         );
 
@@ -165,6 +175,11 @@ final class TreasureRepository
             'max_claims' => $data['max_claims'],
             'points' => $data['points'],
             'is_enabled' => $data['is_enabled'],
+            'finds_mode' => $this->normalizeFindsMode($data['finds_mode'] ?? 'log_entry'),
+            'drop_allowed' => (int) ($data['drop_allowed'] ?? 0),
+            'public_drop_allowed' => (int) ($data['public_drop_allowed'] ?? 0),
+            'hidden_drop_allowed' => (int) ($data['hidden_drop_allowed'] ?? 0),
+            'weight_grams' => max(0, (int) ($data['weight_grams'] ?? 0)),
         ]);
 
         return (int) $pdo->lastInsertId();
@@ -187,7 +202,12 @@ final class TreasureRepository
                 is_visible_on_map = :is_visible_on_map,
                 max_claims = :max_claims,
                 points = :points,
-                is_enabled = :is_enabled
+                is_enabled = :is_enabled,
+                finds_mode = :finds_mode,
+                drop_allowed = :drop_allowed,
+                public_drop_allowed = :public_drop_allowed,
+                hidden_drop_allowed = :hidden_drop_allowed,
+                weight_grams = :weight_grams
              WHERE id = :id'
         );
 
@@ -204,6 +224,11 @@ final class TreasureRepository
             'max_claims' => $data['max_claims'],
             'points' => $data['points'],
             'is_enabled' => $data['is_enabled'],
+            'finds_mode' => $this->normalizeFindsMode($data['finds_mode'] ?? 'log_entry'),
+            'drop_allowed' => (int) ($data['drop_allowed'] ?? 0),
+            'public_drop_allowed' => (int) ($data['public_drop_allowed'] ?? 0),
+            'hidden_drop_allowed' => (int) ($data['hidden_drop_allowed'] ?? 0),
+            'weight_grams' => max(0, (int) ($data['weight_grams'] ?? 0)),
         ]);
     }
 
@@ -381,6 +406,35 @@ final class TreasureRepository
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    private function normalizeTreasureRow(array $treasure): array
+    {
+        $treasure['finds_mode'] = $this->normalizeFindsMode($treasure['finds_mode'] ?? 'log_entry');
+        $treasure['drop_allowed'] = (int) ($treasure['drop_allowed'] ?? 0);
+        $treasure['public_drop_allowed'] = (int) ($treasure['public_drop_allowed'] ?? 0);
+        $treasure['hidden_drop_allowed'] = (int) ($treasure['hidden_drop_allowed'] ?? 0);
+        $treasure['weight_grams'] = max(0, (int) ($treasure['weight_grams'] ?? 0));
+
+        if (($treasure['treasure_type'] ?? '') === 'individual') {
+            $treasure['drop_allowed'] = 0;
+            $treasure['public_drop_allowed'] = 0;
+            $treasure['hidden_drop_allowed'] = 0;
+        }
+
+        if ($treasure['drop_allowed'] !== 1) {
+            $treasure['public_drop_allowed'] = 0;
+            $treasure['hidden_drop_allowed'] = 0;
+        }
+
+        return $treasure;
+    }
+
+    private function normalizeFindsMode(?string $findsMode): string
+    {
+        return in_array($findsMode, ['log_entry', 'inventory_item'], true)
+            ? $findsMode
+            : 'log_entry';
     }
 
     private function distanceMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
