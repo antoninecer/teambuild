@@ -292,6 +292,51 @@ if ($method === 'POST' && $uri === '/api/player/poi/complete') {
     exit;
 }
 
+if ($method === 'GET' && $uri === '/api/player/inventory') {
+    (new PlayerController())->inventory();
+    exit;
+}
+
+if ($method === 'GET' && $uri === '/api/player/journal') {
+    (new PlayerController())->journal();
+    exit;
+}
+
+if ($method === 'GET' && $uri === '/api/player/messages') {
+    (new PlayerController())->messages();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/item/drop') {
+    (new PlayerController())->dropItem();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/item/hide') {
+    (new PlayerController())->hideItem();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/item/pickup') {
+    (new PlayerController())->pickupItem();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/item/use') {
+    (new PlayerController())->useItem();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/message/send') {
+    (new PlayerController())->sendMessage();
+    exit;
+}
+
+if ($method === 'POST' && $uri === '/api/player/message/read') {
+    (new PlayerController())->readMessage();
+    exit;
+}
+
 if ($method === 'POST' && preg_match('#^/admin/games/(\d+)/admins$#', $uri, $matches)) {
     (new GameController())->assignAdmin((int) $matches[1]);
     exit;

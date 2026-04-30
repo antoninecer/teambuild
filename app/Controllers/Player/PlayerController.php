@@ -262,11 +262,13 @@ public function updateLocation(): void
         unset($poi);
 
         $treasures = $this->treasureRepo->visibleForGameWithClaimState($gameId, $playerId, $teamId);
+        $mapItems = $this->treasureRepo->visibleMapItemsForPlayer($gameId, $playerId, $teamId);
 
         echo json_encode([
             'success' => true,
             'pois' => array_values($pois),
             'treasures' => array_values($treasures),
+            'map_items' => array_values($mapItems),
             'visited_poi_ids' => $visitedPoiIds,
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -358,6 +360,32 @@ public function updateLocation(): void
             $treasure['kind'] = 'treasure';
 
             $candidates[] = $treasure;
+        }
+
+        // 3) DROPPED / HIDDEN ITEMS visible to this player
+        $mapItems = $this->treasureRepo->visibleMapItemsForPlayer($gameId, $playerId, $teamId);
+
+        foreach ($mapItems as $item) {
+            if ($item['current_lat'] === null || $item['current_lon'] === null) {
+                continue;
+            }
+
+            $distance = $this->distanceMeters(
+                $lat,
+                $lon,
+                (float) $item['current_lat'],
+                (float) $item['current_lon']
+            );
+
+            $radius = max(30, (int) ($item['radius_m'] ?? 0));
+            if ($distance > $radius) {
+                continue;
+            }
+
+            $item['distance_m'] = round($distance, 1);
+            $item['kind'] = 'item';
+
+            $candidates[] = $item;
         }
 
         usort($candidates, static function (array $a, array $b): int {
@@ -569,6 +597,305 @@ public function updateLocation(): void
         }
 
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function inventory(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $gameId = (int) $session['game_id'];
+        $playerId = (int) $session['player_id'];
+        $teamId = isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null;
+
+        echo json_encode([
+            'success' => true,
+            'items' => $this->treasureRepo->inventoryForPlayer($gameId, $playerId, $teamId),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function journal(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
+        $gameId = (int) $session['game_id'];
+        $playerId = (int) $session['player_id'];
+        $teamId = isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null;
+
+        echo json_encode([
+            'success' => true,
+            'events' => $this->treasureRepo->journalForPlayer($gameId, $playerId, $teamId, $limit),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function messages(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
+        $gameId = (int) $session['game_id'];
+        $playerId = (int) $session['player_id'];
+        $teamId = isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null;
+
+        echo json_encode([
+            'success' => true,
+            'messages' => $this->treasureRepo->messagesForPlayer($gameId, $playerId, $teamId, $limit),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function dropItem(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = $this->jsonBody();
+        $itemInstanceId = (int) ($data['item_instance_id'] ?? 0);
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+        $accuracy = (float) ($data['accuracy'] ?? 0);
+        $visibility = (string) ($data['visibility'] ?? 'all');
+
+        if ($itemInstanceId <= 0) {
+            $this->jsonError(422, 'invalid_item', 'Neplatný předmět.');
+            return;
+        }
+
+        if ($lat === 0.0 && $lon === 0.0) {
+            $this->jsonError(422, 'missing_location', 'Chybí poloha hráče.');
+            return;
+        }
+
+        $result = $this->treasureRepo->dropItem(
+            $itemInstanceId,
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null,
+            $lat,
+            $lon,
+            $accuracy,
+            $visibility
+        );
+
+        $this->emitRepositoryResult($result);
+    }
+
+    public function hideItem(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = $this->jsonBody();
+        $itemInstanceId = (int) ($data['item_instance_id'] ?? 0);
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+        $accuracy = (float) ($data['accuracy'] ?? 0);
+        $visibility = (string) ($data['visibility'] ?? 'hint_only');
+        $hintText = isset($data['hint_text']) ? trim((string) $data['hint_text']) : null;
+        $toPlayerId = isset($data['to_player_id']) && (int) $data['to_player_id'] > 0 ? (int) $data['to_player_id'] : null;
+        $toTeamId = isset($data['to_team_id']) && (int) $data['to_team_id'] > 0 ? (int) $data['to_team_id'] : null;
+        $revealMode = (string) ($data['reveal_mode'] ?? 'none');
+
+        if ($itemInstanceId <= 0) {
+            $this->jsonError(422, 'invalid_item', 'Neplatný předmět.');
+            return;
+        }
+
+        if ($lat === 0.0 && $lon === 0.0) {
+            $this->jsonError(422, 'missing_location', 'Chybí poloha hráče.');
+            return;
+        }
+
+        $result = $this->treasureRepo->hideItem(
+            $itemInstanceId,
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null,
+            $lat,
+            $lon,
+            $accuracy,
+            $visibility,
+            $hintText,
+            $toPlayerId,
+            $toTeamId,
+            $revealMode
+        );
+
+        $this->emitRepositoryResult($result);
+    }
+
+    public function pickupItem(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = $this->jsonBody();
+        $itemInstanceId = (int) ($data['item_instance_id'] ?? 0);
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+        $accuracy = (float) ($data['accuracy'] ?? 0);
+
+        if ($itemInstanceId <= 0) {
+            $this->jsonError(422, 'invalid_item', 'Neplatný předmět.');
+            return;
+        }
+
+        if ($lat === 0.0 && $lon === 0.0) {
+            $this->jsonError(422, 'missing_location', 'Chybí poloha hráče.');
+            return;
+        }
+
+        $result = $this->treasureRepo->pickupItem(
+            $itemInstanceId,
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null,
+            $lat,
+            $lon,
+            $accuracy
+        );
+
+        $this->emitRepositoryResult($result);
+    }
+
+    public function useItem(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = $this->jsonBody();
+        $itemInstanceId = (int) ($data['item_instance_id'] ?? 0);
+        $lat = (float) ($data['lat'] ?? 0);
+        $lon = (float) ($data['lon'] ?? 0);
+        $accuracy = (float) ($data['accuracy'] ?? 0);
+        $targetPoiId = isset($data['target_poi_id']) && (int) $data['target_poi_id'] > 0 ? (int) $data['target_poi_id'] : null;
+
+        if ($itemInstanceId <= 0) {
+            $this->jsonError(422, 'invalid_item', 'Neplatný předmět.');
+            return;
+        }
+
+        if ($lat === 0.0 && $lon === 0.0) {
+            $this->jsonError(422, 'missing_location', 'Chybí poloha hráče.');
+            return;
+        }
+
+        $result = $this->treasureRepo->useItem(
+            $itemInstanceId,
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null,
+            $lat,
+            $lon,
+            $accuracy,
+            $targetPoiId
+        );
+
+        $this->emitRepositoryResult($result);
+    }
+
+    public function sendMessage(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = $this->jsonBody();
+        $body = trim((string) ($data['body'] ?? ''));
+
+        if ($body === '') {
+            $this->jsonError(422, 'empty_message', 'Zpráva nesmí být prázdná.');
+            return;
+        }
+
+        $result = $this->treasureRepo->sendMessage(
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null,
+            isset($data['to_player_id']) && (int) $data['to_player_id'] > 0 ? (int) $data['to_player_id'] : null,
+            isset($data['to_team_id']) && (int) $data['to_team_id'] > 0 ? (int) $data['to_team_id'] : null,
+            isset($data['item_instance_id']) && (int) $data['item_instance_id'] > 0 ? (int) $data['item_instance_id'] : null,
+            isset($data['treasure_id']) && (int) $data['treasure_id'] > 0 ? (int) $data['treasure_id'] : null,
+            isset($data['poi_id']) && (int) $data['poi_id'] > 0 ? (int) $data['poi_id'] : null,
+            (string) ($data['message_type'] ?? 'text'),
+            isset($data['subject']) ? trim((string) $data['subject']) : null,
+            $body,
+            (string) ($data['reveal_mode'] ?? 'none'),
+            isset($data['hint_lat']) ? (float) $data['hint_lat'] : null,
+            isset($data['hint_lon']) ? (float) $data['hint_lon'] : null,
+            isset($data['hint_radius_m']) ? (int) $data['hint_radius_m'] : null
+        );
+
+        $this->emitRepositoryResult($result);
+    }
+
+    public function readMessage(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $session = $this->getSession();
+        if (!$session) {
+            $this->unauthorized();
+            return;
+        }
+
+        $data = $this->jsonBody();
+        $messageId = (int) ($data['message_id'] ?? 0);
+
+        if ($messageId <= 0) {
+            $this->jsonError(422, 'invalid_message', 'Neplatná zpráva.');
+            return;
+        }
+
+        $result = $this->treasureRepo->markMessageRead(
+            $messageId,
+            (int) $session['game_id'],
+            (int) $session['player_id'],
+            isset($session['team_id']) && $session['team_id'] !== null ? (int) $session['team_id'] : null
+        );
+
+        $this->emitRepositoryResult($result);
     }
 
     private function buildPlayerStats(int $playerId, int $gameId): array
@@ -830,6 +1157,24 @@ public function updateLocation(): void
 
     private function serializeExploreObject(array $item): array
     {
+        if (($item['kind'] ?? '') === 'item') {
+            return [
+                'kind' => 'item',
+                'id' => (int) $item['id'],
+                'item_instance_id' => (int) $item['id'],
+                'treasure_id' => (int) ($item['treasure_id'] ?? 0),
+                'name' => (string) ($item['name'] ?? 'Předmět'),
+                'description' => (string) ($item['description'] ?? ''),
+                'lat' => $item['current_lat'] !== null ? (float) $item['current_lat'] : null,
+                'lon' => $item['current_lon'] !== null ? (float) $item['current_lon'] : null,
+                'radius_m' => max(30, (int) ($item['radius_m'] ?? 0)),
+                'distance_m' => (float) ($item['distance_m'] ?? 0),
+                'state' => (string) ($item['state'] ?? ''),
+                'visibility' => (string) ($item['visibility'] ?? ''),
+                'type' => 'item',
+            ];
+        }
+
         if (($item['kind'] ?? '') === 'treasure') {
             return [
                 'kind' => 'treasure',
@@ -902,6 +1247,40 @@ public function updateLocation(): void
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
+    }
+
+    private function jsonBody(): array
+    {
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw ?: '{}', true);
+
+        return is_array($data) ? $data : [];
+    }
+
+    private function jsonError(int $statusCode, string $error, string $message): void
+    {
+        http_response_code($statusCode);
+        echo json_encode([
+            'success' => false,
+            'error' => $error,
+            'message' => $message,
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function emitRepositoryResult(array $result): void
+    {
+        if (($result['success'] ?? false) === false) {
+            $statusCode = match ($result['status'] ?? $result['error'] ?? 'error') {
+                'not_found' => 404,
+                'forbidden' => 403,
+                'invalid_item', 'invalid_message', 'missing_location', 'empty_message', 'target_poi_required', 'rule_missing_coordinates' => 422,
+                'too_far', 'not_carried', 'not_on_map', 'drop_not_allowed', 'public_drop_not_allowed', 'hidden_drop_not_allowed' => 409,
+                default => 400,
+            };
+            http_response_code($statusCode);
+        }
+
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
     }
 
     private function getSession(): ?array

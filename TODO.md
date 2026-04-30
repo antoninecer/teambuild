@@ -1,4 +1,69 @@
-# TODO.md — stav projektu po dnešku
+TODO – pravý horní roh / Kniha hráče
+
+Stav dnes:
+- Starý model player_inventory_items je odstraněný.
+- Nové tabulky existují a jsou čisté:
+  - item_instances
+  - item_events
+  - item_use_rules
+  - player_messages
+  - player_message_reads
+- Backendové API pro inventář/zprávy bylo nasazeno.
+- Pravý horní roh UI zatím zůstává původní „Výsledky“.
+
+Zítra udělat:
+
+1. Ověřit claim inventářového pokladu
+   - najít treasures.finds_mode = 'inventory_item'
+   - sebrat poklad ve hře
+   - ověřit vznik řádku v item_instances
+   - ověřit vznik řádku v item_events
+
+2. Předělat pravý horní roh
+   - místo tlačítka „Výsledky“ udělat „📖 Kniha“
+   - otevřít nový modal/panel
+   - zachovat výsledky jako jednu záložku, ne jako hlavní účel panelu
+
+3. Kniha hráče – záložky
+   - Přehled
+   - Deník
+   - Inventář
+   - Zprávy
+
+4. Deník
+   - napojit na GET /api/player/journal
+   - zobrazit item_events
+   - později přimíchat POI návštěvy z events
+
+5. Inventář
+   - napojit na GET /api/player/inventory
+   - zobrazit nesené předměty
+   - u položky akce:
+     - Položit zde
+     - Skrýt zde
+     - Použít
+     - Poslat stopu
+
+6. Zprávy
+   - napojit na GET /api/player/messages
+   - zobrazit přijaté zprávy/stopy
+   - připravit označení jako přečtené
+
+7. Mapové předměty
+   - ověřit, že map-data/explore vrací map_items
+   - zobrazit položené/skryté viditelné předměty na mapě
+   - umožnit „sebrat z mapy“
+
+8. Testy po UI úpravě
+   - přihlášení hráče
+   - načtení mapy
+   - otevření Knihy
+   - sebrání inventářového pokladu
+   - zobrazení v inventáři
+   - položení na GPS
+   - znovusebrání
+   - poslání stopy
+dnes je 1.5.2026 pracuje se na inventari sbirani pouzivani pokladu aby v pravo nahore byla kniha co vse mame hotovo co mame u sebe a slo to nekde nechat, pripadne poslat zpravu jinemu hraci nechal jsem ti to tady
 
 Datum: průběžný pracovní souhrn po poslední sérii oprav
 
