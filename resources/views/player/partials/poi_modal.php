@@ -10,6 +10,7 @@
                 <button class="modal-btn" style="background:#757575; color:#fff;" onclick="stopSpeech()">ZASTAVIT</button>
                 <button id="completePoiBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="completeCurrentPoi()">POTVRDIT PRŮZKUM</button>
                 <button id="claimBtn" class="modal-btn" style="background:#2e7d32; color:#fff; display:none;" onclick="claimCurrentTreasure()">SEBRAT POKLAD</button>
+                <button id="pickupMapItemBtn" class="modal-btn" style="background:#6a1b9a; color:#fff; display:none;" onclick="pickupCurrentMapItem()">SEBRAT PŘEDMĚT</button>
                 <button class="modal-btn" style="background:#eee;" onclick="closePoiModal()">ZAVŘÍT</button>
             </div>
         </div>

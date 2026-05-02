@@ -506,6 +506,38 @@
             color: rgba(20,20,20,0.68);
         }
 
+
+        .marker-item {
+            font-size: 27px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+        }
+        .marker-item.hidden { opacity: 0.82; }
+        .book-modal { max-width: 640px; }
+        .book-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+        .book-header h2 { margin:0 0 4px; }
+        .book-subtitle { font-size:13px; color:rgba(20,20,20,0.68); line-height:1.35; }
+        .book-close { border:0; background:rgba(255,255,255,0.32); border-radius:999px; width:36px; height:36px; font-size:22px; cursor:pointer; }
+        .book-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+        .book-tab { border:0; border-radius:999px; padding:9px 12px; background:rgba(255,255,255,0.28); cursor:pointer; font-weight:700; }
+        .book-tab.active { background:rgba(25,118,210,0.88); color:#fff; }
+        .book-panel { display:none; }
+        .book-panel.active { display:block; }
+        .book-list { display:grid; gap:10px; }
+        .book-card { background:rgba(255,255,255,0.78); border:1px solid rgba(0,0,0,0.08); border-radius:14px; padding:12px; }
+        .book-card-title { font-weight:800; color:rgba(15,15,15,0.92); margin-bottom:4px; }
+        .book-card-meta { font-size:12px; color:rgba(20,20,20,0.64); line-height:1.35; }
+        .book-card-body { margin-top:8px; font-size:14px; color:rgba(20,20,20,0.84); white-space:pre-line; }
+        .book-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .book-action { border:0; border-radius:10px; padding:9px 10px; cursor:pointer; font-weight:700; background:#eceff1; }
+        .book-action.primary { background:#1976d2; color:#fff; }
+        .book-action.good { background:#2e7d32; color:#fff; }
+        .book-action.warn { background:#ef6c00; color:#fff; }
+        .book-action:disabled { opacity:0.45; cursor:not-allowed; }
+        .book-empty, .book-note { background:rgba(255,255,255,0.55); border-radius:14px; padding:14px; color:rgba(20,20,20,0.72); line-height:1.45; }
+
         @media (max-width: 520px) {
             .ui-overlay {
                 top: 8px;
@@ -542,6 +574,8 @@
 
     <?php require __DIR__ . '/partials/results_modal.php'; ?>
 
+    <?php require __DIR__ . '/partials/book_modal.php'; ?>
+
     <?php require __DIR__ . '/partials/explore_choice_modal.php'; ?>
 
     <?php require __DIR__ . '/partials/help_modal.php'; ?>
@@ -568,8 +602,10 @@
 
         let poiMarkers = [];
         let treasureMarkers = [];
+        let itemMarkers = [];
         let pois = [];
         let treasures = [];
+        let mapItems = [];
         let exploreCandidates = [];
         let currentDetail = null;
         let speechUtterance = null;
@@ -748,8 +784,10 @@
         function clearMarkers() {
             poiMarkers.forEach(marker => map.removeLayer(marker));
             treasureMarkers.forEach(marker => map.removeLayer(marker));
+            itemMarkers.forEach(marker => map.removeLayer(marker));
             poiMarkers = [];
             treasureMarkers = [];
+            itemMarkers = [];
         }
 
         function renderPois() {
@@ -790,6 +828,33 @@
             });
         }
 
+
+        function renderMapItems() {
+            mapItems.forEach(item => {
+                if (item.current_lat === null || item.current_lon === null) {
+                    return;
+                }
+
+                const lat = parseFloat(item.current_lat);
+                const lon = parseFloat(item.current_lon);
+                if (Number.isNaN(lat) || Number.isNaN(lon)) {
+                    return;
+                }
+
+                const isHidden = String(item.state || '') === 'hidden';
+                const itemIcon = L.divIcon({
+                    className: 'marker-item' + (isHidden ? ' hidden' : ''),
+                    html: isHidden ? '🕵️' : '📦',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+
+                const marker = L.marker([lat, lon], { icon: itemIcon }).addTo(map);
+                marker.bindPopup('<strong>' + escapeHtml(item.name || 'Předmět') + '</strong><br>' + (isHidden ? 'Skrytý předmět' : 'Položený předmět'));
+                marker.on('click', () => openMapItemDetail(item));
+                itemMarkers.push(marker);
+            });
+        }
         function reloadMapData() {
             fetch('/api/player/map-data')
                 .then(r => r.json())
@@ -800,10 +865,12 @@
 
                     pois = Array.isArray(data.pois) ? data.pois : [];
                     treasures = Array.isArray(data.treasures) ? data.treasures : [];
+                    mapItems = Array.isArray(data.map_items) ? data.map_items : [];
 
                     clearMarkers();
                     renderPois();
                     renderTreasures();
+                    renderMapItems();
                     updatePlayerCardStats();
                     refreshExploreAvailability();
                 })
@@ -831,6 +898,7 @@
             document.getElementById('poiText').innerText = currentDetail.text;
             renderPoiMedia(currentDetail.media);
             document.getElementById('claimBtn').style.display = 'none';
+            document.getElementById('pickupMapItemBtn').style.display = 'none';
             document.getElementById('completePoiBtn').style.display = 'inline-block';
 
             let meta = '';
@@ -889,8 +957,70 @@
             document.getElementById('poiMeta').innerText = meta;
             document.getElementById('completePoiBtn').style.display = 'none';
             document.getElementById('claimBtn').style.display = canClaim ? 'inline-block' : 'none';
+            document.getElementById('pickupMapItemBtn').style.display = 'none';
 
             document.getElementById('poiModal').style.display = 'flex';
+        }
+
+        function openMapItemDetail(item) {
+            currentDetail = {
+                kind: 'item',
+                id: Number(item.id || item.item_instance_id),
+                item_instance_id: Number(item.item_instance_id || item.id),
+                treasure_id: Number(item.treasure_id || 0),
+                title: item.name || 'Předmět',
+                text: item.description || 'Předmět leží na mapě.',
+                radius_m: Number(item.radius_m || 30),
+                lat: Number(item.current_lat ?? item.lat),
+                lon: Number(item.current_lon ?? item.lon),
+                state: item.state || 'dropped',
+                visibility: item.visibility || 'all'
+            };
+
+            document.getElementById('poiTitle').innerText = currentDetail.title;
+            document.getElementById('poiType').style.display = 'inline-block';
+            document.getElementById('poiType').innerText = currentDetail.state === 'hidden' ? 'skrytý předmět' : 'položený předmět';
+            document.getElementById('poiText').innerText = currentDetail.text;
+            renderPoiMedia([]);
+
+            let canPickup = true;
+            let meta = 'Viditelnost: ' + currentDetail.visibility;
+            if (lastPos) {
+                const dist = distanceMeters(lastPos.lat, lastPos.lon, currentDetail.lat, currentDetail.lon);
+                meta += ' | Vzdálenost: ' + Math.round(dist) + ' m | Radius: ' + Math.round(currentDetail.radius_m) + ' m';
+                if (dist > currentDetail.radius_m) {
+                    canPickup = false;
+                    meta += ' | Jsi zatím mimo dosah';
+                }
+            }
+
+            document.getElementById('poiMeta').innerText = meta;
+            document.getElementById('completePoiBtn').style.display = 'none';
+            document.getElementById('claimBtn').style.display = 'none';
+            document.getElementById('pickupMapItemBtn').style.display = canPickup ? 'inline-block' : 'none';
+            document.getElementById('poiModal').style.display = 'flex';
+        }
+
+        function pickupCurrentMapItem() {
+            if (!currentDetail || currentDetail.kind !== 'item') {
+                return;
+            }
+            const loc = currentLocationPayload();
+            if (!loc) return;
+
+            apiJson('/api/player/item/pickup', {
+                item_instance_id: currentDetail.item_instance_id,
+                ...loc
+            }).then(data => {
+                if (!data.success) {
+                    alert(itemActionError(data.status || data.error));
+                    return;
+                }
+                alert('Předmět byl sebrán do inventáře.');
+                closePoiModal();
+                reloadMapData();
+                loadBookData();
+            });
         }
 
         function closePoiModal() {
@@ -986,7 +1116,8 @@
 
             const hasPoi = pois.some(poi => Number(poi.visited_by_player || 0) !== 1 && distanceMeters(lastPos.lat, lastPos.lon, Number(poi.lat), Number(poi.lon)) <= Number(poi.radius_m || 0));
             const hasTreasure = treasures.some(treasure => isTreasureDiscoverable(treasure) && distanceMeters(lastPos.lat, lastPos.lon, Number(treasure.lat), Number(treasure.lon)) <= Number(treasure.radius_m || 0));
-            return hasPoi || hasTreasure;
+            const hasMapItem = mapItems.some(item => item.current_lat !== null && item.current_lon !== null && distanceMeters(lastPos.lat, lastPos.lon, Number(item.current_lat), Number(item.current_lon)) <= Math.max(30, Number(item.radius_m || 0)));
+            return hasPoi || hasTreasure || hasMapItem;
         }
 
         function refreshExploreAvailability() {
@@ -1052,6 +1183,11 @@
         }
 
         function openExploreObject(item) {
+            if (item.kind === 'item') {
+                openMapItemDetail(item);
+                return;
+            }
+
             if (item.kind === 'treasure') {
                 openTreasureDetail(item);
                 return;
@@ -1080,7 +1216,7 @@
 
                 const sub = document.createElement('div');
                 sub.className = 'explore-option-subline';
-                const typeLabel = item.kind === 'treasure' ? 'Poklad' : 'Bod zájmu';
+                const typeLabel = item.kind === 'item' ? 'Předmět na mapě' : (item.kind === 'treasure' ? 'Poklad' : 'Bod zájmu');
                 const distance = Math.round(Number(item.distance_m || 0));
                 sub.innerText = typeLabel + ' • přibližně ' + distance + ' m';
 
@@ -1200,6 +1336,192 @@
             });
         }
 
+
+        function formatDateTime(value) {
+            if (!value) return '—';
+            const date = new Date(String(value).replace(' ', 'T'));
+            return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('cs-CZ');
+        }
+
+        function currentLocationPayload() {
+            if (!lastPos) {
+                alert('Nejdřív potřebuji znát tvoji polohu.');
+                return null;
+            }
+            return { lat: lastPos.lat, lon: lastPos.lon, accuracy: Number(lastPos.acc || 0) };
+        }
+
+        function apiJson(url, payload = null, method = null) {
+            const options = { method: method || (payload === null ? 'GET' : 'POST'), headers: { 'Content-Type': 'application/json' } };
+            if (payload !== null) options.body = JSON.stringify(payload);
+            return fetch(url, options).then(async response => {
+                const data = await response.json().catch(() => ({ success: false, status: 'invalid_json' }));
+                if (!response.ok && data.success !== true) data.http_status = response.status;
+                return data;
+            });
+        }
+
+        function openBookModal() {
+            updatePlayerCardStats();
+            document.getElementById('bookModal').style.display = 'flex';
+            switchBookTab('overview');
+            loadBookData();
+        }
+
+        function closeBookModal() {
+            document.getElementById('bookModal').style.display = 'none';
+        }
+
+        function switchBookTab(tab) {
+            ['overview', 'journal', 'inventory', 'messages'].forEach(name => {
+                const cap = name.charAt(0).toUpperCase() + name.slice(1);
+                document.getElementById('bookTab' + cap).classList.toggle('active', name === tab);
+                document.getElementById('bookPanel' + cap).classList.toggle('active', name === tab);
+            });
+        }
+
+        function loadBookData() {
+            const ids = {
+                bookMyPoints: initialPlayerStats.points || 0,
+                bookMyRank: '#' + String(initialPlayerStats.rank || 0),
+                bookMyPois: initialPlayerStats.pois_visited || 0,
+                bookMyTreasures: initialPlayerStats.treasures_found || 0,
+                bookMyLastPoi: initialPlayerStats.last_checkpoint || '—'
+            };
+            Object.keys(ids).forEach(id => { const el = document.getElementById(id); if (el) el.innerText = String(ids[id]); });
+
+            apiJson('/api/player/inventory').then(data => renderInventory(data.items || []));
+            apiJson('/api/player/journal?limit=80').then(data => renderJournal(data.events || []));
+            apiJson('/api/player/messages?limit=80').then(data => renderMessages(data.messages || []));
+        }
+
+        function renderInventory(items) {
+            const container = document.getElementById('bookInventoryList');
+            container.innerHTML = '';
+            if (!items.length) {
+                container.innerHTML = '<div class="book-empty">Zatím u sebe nemáš žádný inventářový předmět.</div>';
+                return;
+            }
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                const canDrop = Number(item.drop_allowed || 0) === 1;
+                const canDropPublic = canDrop && Number(item.public_drop_allowed || 0) === 1;
+                const canHide = canDrop && Number(item.hidden_drop_allowed || 0) === 1;
+                const weight = Number(item.weight_grams || 0);
+                card.innerHTML = '<div class="book-card-title">🎒 ' + escapeHtml(item.name || 'Předmět') + '</div>'
+                    + '<div class="book-card-meta">Sebráno: ' + escapeHtml(formatDateTime(item.picked_at || item.created_at)) + (weight > 0 ? ' • váha ' + weight + ' g' : '') + '</div>'
+                    + '<div class="book-card-body">' + escapeHtml(item.description || 'Bez popisu.') + '</div>';
+                const actions = document.createElement('div');
+                actions.className = 'book-actions';
+                actions.innerHTML = '<button class="book-action good" type="button" onclick="useInventoryItem(' + Number(item.id) + ')">Použít</button>'
+                    + '<button class="book-action primary" type="button" ' + (canDropPublic ? '' : 'disabled') + ' onclick="dropInventoryItem(' + Number(item.id) + ')">Položit zde</button>'
+                    + '<button class="book-action warn" type="button" ' + (canHide ? '' : 'disabled') + ' onclick="hideInventoryItem(' + Number(item.id) + ')">Skrýt zde</button>'
+                    + '<button class="book-action" type="button" onclick="sendItemHint(' + Number(item.id) + ', ' + Number(item.treasure_id || 0) + ')">Poslat stopu</button>';
+                card.appendChild(actions);
+                container.appendChild(card);
+            });
+        }
+
+        function renderJournal(events) {
+            const container = document.getElementById('bookJournalList');
+            container.innerHTML = '';
+            if (!events.length) {
+                container.innerHTML = '<div class="book-empty">Deník předmětů je zatím prázdný.</div>';
+                return;
+            }
+            const labels = { claimed: 'Sebráno do inventáře', dropped: 'Položeno na mapu', hidden: 'Skryto na mapě', picked_from_map: 'Sebráno z mapy', used: 'Použito', consumed: 'Použito a spotřebováno', message_sent: 'Odeslána stopa', created: 'Vytvořeno' };
+            events.forEach(event => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                const label = labels[event.event_type] || event.event_type || 'Událost';
+                card.innerHTML = '<div class="book-card-title">' + escapeHtml(label) + ': ' + escapeHtml(event.treasure_name || 'Předmět') + '</div>'
+                    + '<div class="book-card-meta">' + escapeHtml(formatDateTime(event.created_at)) + (event.player_nickname ? ' • ' + escapeHtml(event.player_nickname) : '') + '</div>'
+                    + '<div class="book-card-body">' + escapeHtml(event.note || '') + '</div>';
+                container.appendChild(card);
+            });
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('bookMessagesList');
+            container.innerHTML = '';
+            if (!messages.length) {
+                container.innerHTML = '<div class="book-empty">Zatím tu nejsou žádné zprávy ani stopy.</div>';
+                return;
+            }
+            messages.forEach(message => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                const title = message.subject || (message.message_type === 'item_hint' ? 'Stopa k předmětu' : 'Zpráva');
+                const from = message.from_nickname ? 'Od: ' + message.from_nickname : 'Systém';
+                const readLabel = Number(message.is_read || 0) === 1 ? 'přečteno' : 'nepřečteno';
+                card.innerHTML = '<div class="book-card-title">' + escapeHtml(title) + '</div>'
+                    + '<div class="book-card-meta">' + escapeHtml(from) + ' • ' + escapeHtml(formatDateTime(message.created_at)) + ' • ' + readLabel + '</div>'
+                    + '<div class="book-card-body">' + escapeHtml(message.body || '') + '</div>';
+                const actions = document.createElement('div');
+                actions.className = 'book-actions';
+                actions.innerHTML = '<button class="book-action primary" type="button" onclick="markMessageRead(' + Number(message.id) + ')">Označit jako přečtené</button>';
+                card.appendChild(actions);
+                container.appendChild(card);
+            });
+        }
+
+        function dropInventoryItem(itemInstanceId) {
+            const loc = currentLocationPayload();
+            if (!loc || !confirm('Položit tento předmět na aktuální GPS polohu?')) return;
+            apiJson('/api/player/item/drop', { item_instance_id: itemInstanceId, ...loc, visibility: 'all' }).then(data => {
+                if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
+                alert('Předmět byl položen na mapu.');
+                loadBookData();
+                reloadMapData();
+            });
+        }
+
+        function hideInventoryItem(itemInstanceId) {
+            const loc = currentLocationPayload();
+            if (!loc) return;
+            const hint = prompt('Krátká stopa pro pozdější nalezení. Může zůstat prázdná.');
+            if (hint === null) return;
+            apiJson('/api/player/item/hide', { item_instance_id: itemInstanceId, ...loc, visibility: 'hint_only', hint_text: hint, reveal_mode: 'none' }).then(data => {
+                if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
+                alert('Předmět byl skryt na mapě.');
+                loadBookData();
+                reloadMapData();
+            });
+        }
+
+        function useInventoryItem(itemInstanceId) {
+            const loc = currentLocationPayload();
+            if (!loc) return;
+            apiJson('/api/player/item/use', { item_instance_id: itemInstanceId, ...loc }).then(data => {
+                if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
+                alert(data.consumes_item ? 'Předmět byl použit a spotřebován.' : 'Předmět byl použit.');
+                loadBookData();
+                reloadMapData();
+            });
+        }
+
+        function sendItemHint(itemInstanceId, treasureId) {
+            const body = prompt('Text stopy nebo zprávy k předmětu:');
+            if (body === null || body.trim() === '') return;
+            apiJson('/api/player/message/send', { item_instance_id: itemInstanceId, treasure_id: treasureId, message_type: 'item_hint', subject: 'Stopa k předmětu', body: body.trim(), reveal_mode: 'none' }).then(data => {
+                if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
+                alert('Stopa byla uložena do zpráv.');
+                loadBookData();
+            });
+        }
+
+        function markMessageRead(messageId) {
+            apiJson('/api/player/message/read', { message_id: messageId }).then(data => {
+                if (!data.success) { alert('Zprávu se nepodařilo označit jako přečtenou.'); return; }
+                loadBookData();
+            });
+        }
+
+        function itemActionError(status) {
+            const errors = { not_found: 'Předmět nebyl nalezen.', forbidden: 'K tomuto předmětu nemáš oprávnění.', not_carried: 'Tento předmět teď nemáš u sebe.', not_on_map: 'Tento předmět neleží na mapě.', too_far: 'Jsi od předmětu příliš daleko.', drop_not_allowed: 'Tento předmět nelze odložit.', public_drop_not_allowed: 'Tento předmět nelze položit veřejně.', hidden_drop_not_allowed: 'Tento předmět nelze skrýt.', target_poi_required: 'Tento předmět lze použít jen u konkrétního místa.', rule_missing_coordinates: 'Pravidlo použití nemá nastavené souřadnice.' };
+            return errors[status] || 'Akce se nepodařila dokončit.';
+        }
         reloadMapData();
         updatePlayerCardStats();
         refreshExploreAvailability();

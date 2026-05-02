@@ -9,9 +9,9 @@
             <div id="status" class="player-subline">Zjišťuji polohu…</div>
         </div>
 
-        <div class="ui-box context-box" onclick="openResultsModal()">
-            <div class="context-icon">📋</div>
-            <div class="context-subline">Výsledky</div>
+        <div class="ui-box context-box" onclick="openBookModal()">
+            <div class="context-icon">📖</div>
+            <div class="context-subline">Kniha</div>
         </div>
     </div>
 

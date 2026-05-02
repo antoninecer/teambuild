@@ -77,6 +77,11 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
                 </div>
             </div>
             <div>
+                <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" id="btn-use-location" style="gap: 8px; font-size: 13px; padding: 8px 12px;">
+                        📍 Použít aktuální polohu
+                    </button>
+                </div>
                 <div id="map" style="height: 400px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 12px; z-index: 1;"></div>
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
                     <div class="form-group">
@@ -181,6 +186,46 @@ $mediaRows = is_array($oldMedia) ? array_values($oldMedia) : array_values($exist
         lonInput.value = lon;
 
         marker.setLatLng(e.latlng);
+    });
+
+    document.getElementById('btn-use-location').addEventListener('click', function() {
+        if (!navigator.geolocation) {
+            alert('Geolokace není podporována vaším prohlížečem.');
+            return;
+        }
+
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⌛ Získávám...';
+
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const latlng = L.latLng(lat, lon);
+            
+            map.setView(latlng, 17);
+            
+            latInput.value = lat.toFixed(7);
+            lonInput.value = lon.toFixed(7);
+            
+            if (marker) {
+                marker.setLatLng(latlng);
+            } else {
+                marker = L.marker(latlng).addTo(map);
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }, function(error) {
+            alert('Chyba při získávání polohy: ' + error.message);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        });
     });
 
     let mediaIndex = 0;
