@@ -852,9 +852,8 @@ final class TreasureRepository
             return ['success' => false, 'status' => 'empty_message'];
         }
 
-        if ($toPlayerId === null && $toTeamId === null) {
-            $toPlayerId = $fromPlayerId;
-        }
+        // If no concrete recipient is set, keep both recipient fields NULL.
+        // NULL/NULL means broadcast to all players in the game.
 
         try {
             $pdo->beginTransaction();
@@ -987,7 +986,8 @@ final class TreasureRepository
             LEFT JOIN player_message_reads r ON r.message_id = pm.id AND r.player_id = :player_id
             WHERE pm.game_id = :game_id
               AND (
-                    pm.to_player_id = :player_id
+                    (pm.to_player_id IS NULL AND pm.to_team_id IS NULL)
+                    OR pm.to_player_id = :player_id
                     OR pm.from_player_id = :player_id
                     ' . ($teamId !== null ? 'OR pm.to_team_id = :team_id OR pm.from_team_id = :team_id' : '') . '
                   )
@@ -1036,7 +1036,8 @@ final class TreasureRepository
             WHERE id = :id
               AND game_id = :game_id
               AND (
-                    to_player_id = :player_id
+                    (to_player_id IS NULL AND to_team_id IS NULL)
+                    OR to_player_id = :player_id
                     OR from_player_id = :player_id
                     ' . ($teamId !== null ? 'OR to_team_id = :team_id OR from_team_id = :team_id' : '') . '
                   )

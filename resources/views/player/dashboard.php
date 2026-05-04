@@ -515,13 +515,20 @@
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
         }
         .marker-item.hidden { opacity: 0.82; }
-        .book-modal { max-width: 640px; }
-        .book-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+        .marker-message {
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
+        }
+        .book-modal { max-width: 640px; max-height: 84vh; overflow-y: auto; position: relative; padding: 16px; scroll-padding-top: 96px; }
+        .book-header { position:sticky; top:0; z-index:30; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:0 0 12px; padding:12px 12px; border-radius:14px; background:rgba(236,239,232,0.98); backdrop-filter:blur(8px); box-shadow:0 8px 18px rgba(0,0,0,0.10); }
         .book-header h2 { margin:0 0 4px; }
         .book-subtitle { font-size:13px; color:rgba(20,20,20,0.68); line-height:1.35; }
         .book-close { border:0; background:rgba(255,255,255,0.32); border-radius:999px; width:36px; height:36px; font-size:22px; cursor:pointer; }
-        .book-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
-        .book-tab { border:0; border-radius:999px; padding:9px 12px; background:rgba(255,255,255,0.28); cursor:pointer; font-weight:700; }
+        .book-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; position:sticky; top:74px; z-index:24; padding:6px 0; background:rgba(54,76,48,0.78); backdrop-filter:blur(8px); border-radius:12px; }
+        .book-tab { border:0; border-radius:999px; padding:9px 12px; background:rgba(255,255,255,0.42); cursor:pointer; font-weight:700; }
         .book-tab.active { background:rgba(25,118,210,0.88); color:#fff; }
         .book-panel { display:none; }
         .book-panel.active { display:block; }
@@ -590,6 +597,15 @@
         const gameStartedAt = new Date().getTime();
 
         const initialPlayerStats = <?= json_encode($playerStats, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        const currentPlayerId = <?= (int) ($player['id'] ?? 0) ?>;
+        const messageRecipients = <?= json_encode(array_values(array_map(static function (array $row): array {
+            return [
+                'id' => (int) ($row['player_id'] ?? 0),
+                'nickname' => (string) ($row['nickname'] ?? ''),
+            ];
+        }, array_filter($leaderboard ?? [], static function (array $row) use ($player): bool {
+            return (int) ($row['player_id'] ?? 0) > 0 && (int) ($row['player_id'] ?? 0) !== (int) ($player['id'] ?? 0);
+        }))), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
         const map = L.map('map', { zoomControl: false }).setView(mapCenter, mapZoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -603,6 +619,9 @@
         let poiMarkers = [];
         let treasureMarkers = [];
         let itemMarkers = [];
+        let messageLocationMarker = null;
+        let messageLocationCircle = null;
+        let messageLocations = {};
         let pois = [];
         let treasures = [];
         let mapItems = [];
@@ -855,6 +874,59 @@
                 itemMarkers.push(marker);
             });
         }
+        function showMessageLocation(messageId) {
+            const message = messageLocations[String(messageId)];
+            if (!message) {
+                alert('U této zprávy není uložená poloha.');
+                return;
+            }
+
+            const lat = Number(message.lat);
+            const lon = Number(message.lon);
+            const radius = Number(message.radius || 25);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                alert('Poloha ve zprávě není platná.');
+                return;
+            }
+
+            if (messageLocationMarker) {
+                map.removeLayer(messageLocationMarker);
+                messageLocationMarker = null;
+            }
+            if (messageLocationCircle) {
+                map.removeLayer(messageLocationCircle);
+                messageLocationCircle = null;
+            }
+
+            const messageIcon = L.divIcon({
+                className: 'marker-message',
+                html: '✉️',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
+            messageLocationMarker = L.marker([lat, lon], { icon: messageIcon, zIndexOffset: 900 }).addTo(map);
+            messageLocationMarker.bindPopup(
+                '<strong>' + escapeHtml(message.title || 'Zpráva') + '</strong><br>'
+                + escapeHtml(message.from || '') + '<br>'
+                + escapeHtml(message.body || '').replace(/\n/g, '<br>')
+            ).openPopup();
+
+            messageLocationCircle = L.circle([lat, lon], {
+                radius: Number.isFinite(radius) && radius > 0 ? radius : 25,
+                fillOpacity: 0.08,
+                weight: 2
+            }).addTo(map);
+
+            closeBookModal();
+            closePlayerCard();
+            document.querySelectorAll('.modal').forEach(modal => {
+                if (modal.id === 'bookModal') modal.style.display = 'none';
+            });
+            map.setView([lat, lon], Math.max(map.getZoom(), 17));
+            setTimeout(() => map.invalidateSize(), 80);
+        }
+
         function reloadMapData() {
             fetch('/api/player/map-data')
                 .then(r => r.json())
@@ -1363,14 +1435,44 @@
 
         function openBookModal() {
             updatePlayerCardStats();
-            document.getElementById('bookModal').style.display = 'flex';
+            const modal = document.getElementById('bookModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            const content = modal.querySelector('.book-modal') || modal.querySelector('.modal-content');
+            if (content) content.scrollTop = 0;
             switchBookTab('overview');
             loadBookData();
         }
 
         function closeBookModal() {
-            document.getElementById('bookModal').style.display = 'none';
+            const modal = document.getElementById('bookModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            const content = modal.querySelector('.book-modal') || modal.querySelector('.modal-content');
+            if (content) content.scrollTop = 0;
         }
+
+        function closeVisibleModalById(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return false;
+            const visible = modal.style.display !== 'none' && window.getComputedStyle(modal).display !== 'none';
+            if (!visible) return false;
+            modal.style.display = 'none';
+            return true;
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            const modalIds = ['bookModal', 'playerModal', 'resultsModal', 'helpModal', 'poiModal', 'exploreChoiceModal'];
+            for (const modalId of modalIds) {
+                if (closeVisibleModalById(modalId)) {
+                    event.preventDefault();
+                    return;
+                }
+            }
+        });
 
         function switchBookTab(tab) {
             ['overview', 'journal', 'inventory', 'messages'].forEach(name => {
@@ -1414,10 +1516,11 @@
                     + '<div class="book-card-body">' + escapeHtml(item.description || 'Bez popisu.') + '</div>';
                 const actions = document.createElement('div');
                 actions.className = 'book-actions';
-                actions.innerHTML = '<button class="book-action good" type="button" onclick="useInventoryItem(' + Number(item.id) + ')">Použít</button>'
-                    + '<button class="book-action primary" type="button" ' + (canDropPublic ? '' : 'disabled') + ' onclick="dropInventoryItem(' + Number(item.id) + ')">Položit zde</button>'
-                    + '<button class="book-action warn" type="button" ' + (canHide ? '' : 'disabled') + ' onclick="hideInventoryItem(' + Number(item.id) + ')">Skrýt zde</button>'
-                    + '<button class="book-action" type="button" onclick="sendItemHint(' + Number(item.id) + ', ' + Number(item.treasure_id || 0) + ')">Poslat stopu</button>';
+                const itemId = Number(item.id);
+                const treasureId = Number(item.treasure_id || 0);
+                actions.innerHTML = '<button class="book-action good js-inventory-action" type="button" data-action="use" data-item-id="' + itemId + '">Použít</button>'
+                    + '<button class="book-action primary js-inventory-action" type="button" ' + (canDropPublic ? '' : 'disabled') + ' data-action="drop" data-item-id="' + itemId + '">Položit zde</button>'
+                    + '<button class="book-action warn js-inventory-action" type="button" ' + (canHide ? '' : 'disabled') + ' data-action="hide" data-item-id="' + itemId + '">Skrýt zde</button>';
                 card.appendChild(actions);
                 container.appendChild(card);
             });
@@ -1445,30 +1548,157 @@
         function renderMessages(messages) {
             const container = document.getElementById('bookMessagesList');
             container.innerHTML = '';
+
+            renderMessageComposer(container);
+            messageLocations = {};
+
             if (!messages.length) {
-                container.innerHTML = '<div class="book-empty">Zatím tu nejsou žádné zprávy ani stopy.</div>';
+                const empty = document.createElement('div');
+                empty.className = 'book-empty';
+                empty.innerText = 'Zatím tu nejsou žádné zprávy ani stopy.';
+                container.appendChild(empty);
                 return;
             }
+
             messages.forEach(message => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
                 const title = message.subject || (message.message_type === 'item_hint' ? 'Stopa k předmětu' : 'Zpráva');
                 const from = message.from_nickname ? 'Od: ' + message.from_nickname : 'Systém';
+                const to = message.to_nickname ? 'Pro: ' + message.to_nickname : 'Pro: všichni';
                 const readLabel = Number(message.is_read || 0) === 1 ? 'přečteno' : 'nepřečteno';
+                let body = String(message.body || '');
+                const hasLocation = message.hint_lat !== null && message.hint_lat !== undefined && message.hint_lon !== null && message.hint_lon !== undefined;
+                if (hasLocation) {
+                    body += '\n\nPoloha: ' + Number(message.hint_lat).toFixed(6) + ', ' + Number(message.hint_lon).toFixed(6);
+                    messageLocations[String(message.id)] = {
+                        lat: Number(message.hint_lat),
+                        lon: Number(message.hint_lon),
+                        radius: Number(message.hint_radius_m || 25),
+                        title: title,
+                        from: from,
+                        body: String(message.body || '')
+                    };
+                }
                 card.innerHTML = '<div class="book-card-title">' + escapeHtml(title) + '</div>'
-                    + '<div class="book-card-meta">' + escapeHtml(from) + ' • ' + escapeHtml(formatDateTime(message.created_at)) + ' • ' + readLabel + '</div>'
-                    + '<div class="book-card-body">' + escapeHtml(message.body || '') + '</div>';
-                const actions = document.createElement('div');
-                actions.className = 'book-actions';
-                actions.innerHTML = '<button class="book-action primary" type="button" onclick="markMessageRead(' + Number(message.id) + ')">Označit jako přečtené</button>';
-                card.appendChild(actions);
+                    + '<div class="book-card-meta">' + escapeHtml(from) + ' • ' + escapeHtml(to) + ' • ' + escapeHtml(formatDateTime(message.created_at)) + ' • ' + readLabel + '</div>'
+                    + '<div class="book-card-body">' + escapeHtml(body).replace(/\n/g, '<br>') + '</div>';
+                if (hasLocation || Number(message.is_read || 0) !== 1) {
+                    const actions = document.createElement('div');
+                    actions.className = 'book-actions';
+                    const buttons = [];
+                    if (hasLocation) {
+                        buttons.push('<button class="book-action good" type="button" onclick="showMessageLocation(' + Number(message.id) + ')">Zobrazit na mapě</button>');
+                    }
+                    if (Number(message.is_read || 0) !== 1) {
+                        buttons.push('<button class="book-action primary" type="button" onclick="markMessageRead(' + Number(message.id) + ')">Označit jako přečtené</button>');
+                    }
+                    actions.innerHTML = buttons.join('');
+                    card.appendChild(actions);
+                }
                 container.appendChild(card);
             });
         }
 
+        function renderMessageComposer(container) {
+            const card = document.createElement('div');
+            card.className = 'book-card';
+            const options = ['<option value="">Všem hráčům</option>'].concat(
+                (messageRecipients || []).map(player => '<option value="' + Number(player.id) + '">' + escapeHtml(player.nickname || ('Hráč #' + player.id)) + '</option>')
+            ).join('');
+
+            card.innerHTML = '<div class="book-card-title">Poslat zprávu</div>'
+                + '<div class="book-card-meta">Zpráva může být pro všechny, nebo pro jednoho konkrétního hráče.</div>'
+                + '<div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">'
+                + '<select id="playerMessageRecipient" style="font:inherit; padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.22); background:#fff; color:#111;">' + options + '</select>'
+                + '<textarea id="playerMessageBody" rows="3" placeholder="Text zprávy…" style="font:inherit; padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.22); background:#fff; color:#111;"></textarea>'
+                + '<label style="display:flex; gap:8px; align-items:center; font-size:14px;"><input id="playerMessageIncludeLocation" type="checkbox"> přidat aktuální GPS polohu</label>'
+                + '<div id="playerMessageStatus" class="book-card-meta" style="font-weight:700;"></div>'
+                + '</div>';
+
+            const actions = document.createElement('div');
+            actions.className = 'book-actions';
+            actions.innerHTML = '<button class="book-action primary" type="button" onclick="sendPlayerMessage()">Odeslat zprávu</button>';
+            card.appendChild(actions);
+            container.appendChild(card);
+        }
+
+        function sendPlayerMessage() {
+            const recipient = document.getElementById('playerMessageRecipient');
+            const bodyEl = document.getElementById('playerMessageBody');
+            const includeLocationEl = document.getElementById('playerMessageIncludeLocation');
+            const statusEl = document.getElementById('playerMessageStatus');
+            const rawBody = (bodyEl ? bodyEl.value : '').trim();
+            if (!rawBody) {
+                if (statusEl) statusEl.innerText = 'Napiš text zprávy.';
+                return;
+            }
+
+            const payload = {
+                message_type: 'text',
+                subject: 'Zpráva hráče',
+                body: rawBody,
+                reveal_mode: 'none'
+            };
+
+            const toPlayerId = recipient && recipient.value ? Number(recipient.value) : 0;
+            if (toPlayerId > 0) {
+                payload.to_player_id = toPlayerId;
+            }
+
+            if (includeLocationEl && includeLocationEl.checked && lastPos) {
+                payload.reveal_mode = 'exact_location';
+                payload.hint_lat = lastPos.lat;
+                payload.hint_lon = lastPos.lon;
+                payload.body = rawBody + '\n\nMoje poloha: ' + Number(lastPos.lat).toFixed(6) + ', ' + Number(lastPos.lon).toFixed(6);
+            }
+
+            if (statusEl) statusEl.innerText = 'Odesílám…';
+            apiJson('/api/player/message/send', payload).then(data => {
+                if (!data.success) {
+                    if (statusEl) statusEl.innerText = itemActionError(data.status || data.error);
+                    return;
+                }
+                if (bodyEl) bodyEl.value = '';
+                if (includeLocationEl) includeLocationEl.checked = false;
+                if (statusEl) statusEl.innerText = 'Zpráva byla odeslána.';
+                loadBookData();
+            });
+        }
+
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('.js-inventory-action');
+            if (!button || button.disabled) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const itemInstanceId = Number(button.dataset.itemId || 0);
+            if (!itemInstanceId) {
+                alert('Neplatný předmět. Zkus znovu načíst stránku.');
+                return;
+            }
+
+            const action = button.dataset.action || '';
+            if (action === 'use') {
+                useInventoryItem(itemInstanceId);
+                return;
+            }
+            if (action === 'drop') {
+                dropInventoryItem(itemInstanceId);
+                return;
+            }
+            if (action === 'hide') {
+                hideInventoryItem(itemInstanceId);
+                return;
+            }
+        });
+
         function dropInventoryItem(itemInstanceId) {
             const loc = currentLocationPayload();
-            if (!loc || !confirm('Položit tento předmět na aktuální GPS polohu?')) return;
+            if (!loc) return;
             apiJson('/api/player/item/drop', { item_instance_id: itemInstanceId, ...loc, visibility: 'all' }).then(data => {
                 if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
                 alert('Předmět byl položen na mapu.');
@@ -1480,11 +1710,9 @@
         function hideInventoryItem(itemInstanceId) {
             const loc = currentLocationPayload();
             if (!loc) return;
-            const hint = prompt('Krátká stopa pro pozdější nalezení. Může zůstat prázdná.');
-            if (hint === null) return;
-            apiJson('/api/player/item/hide', { item_instance_id: itemInstanceId, ...loc, visibility: 'hint_only', hint_text: hint, reveal_mode: 'none' }).then(data => {
+            apiJson('/api/player/item/hide', { item_instance_id: itemInstanceId, ...loc, visibility: 'all', hint_text: '', reveal_mode: 'none' }).then(data => {
                 if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
-                alert('Předmět byl skryt na mapě.');
+                alert('Předmět byl skryt. Na mapě nebude vidět, ale jde najít průzkumem okolí.');
                 loadBookData();
                 reloadMapData();
             });
@@ -1498,16 +1726,6 @@
                 alert(data.consumes_item ? 'Předmět byl použit a spotřebován.' : 'Předmět byl použit.');
                 loadBookData();
                 reloadMapData();
-            });
-        }
-
-        function sendItemHint(itemInstanceId, treasureId) {
-            const body = prompt('Text stopy nebo zprávy k předmětu:');
-            if (body === null || body.trim() === '') return;
-            apiJson('/api/player/message/send', { item_instance_id: itemInstanceId, treasure_id: treasureId, message_type: 'item_hint', subject: 'Stopa k předmětu', body: body.trim(), reveal_mode: 'none' }).then(data => {
-                if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
-                alert('Stopa byla uložena do zpráv.');
-                loadBookData();
             });
         }
 
