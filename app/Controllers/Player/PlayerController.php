@@ -1274,7 +1274,7 @@ public function updateLocation(): void
                 'not_found' => 404,
                 'forbidden' => 403,
                 'invalid_item', 'invalid_message', 'missing_location', 'empty_message', 'target_poi_required', 'rule_missing_coordinates' => 422,
-                'too_far', 'not_carried', 'not_on_map', 'drop_not_allowed', 'public_drop_not_allowed', 'hidden_drop_not_allowed' => 409,
+                'too_far', 'not_carried', 'not_on_map', 'drop_not_allowed', 'public_drop_not_allowed', 'hidden_drop_not_allowed', 'no_interaction', 'target_poi_not_found' => 409,
                 default => 400,
             };
             http_response_code($statusCode);

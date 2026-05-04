@@ -758,6 +758,16 @@ final class TreasureRepository
             }
 
             $rule = $this->findUseRule($pdo, $gameId, (int) $item['treasure_id'], $targetPoiId);
+
+            if ($rule === null) {
+                $pdo->rollBack();
+                return [
+                    'success' => false,
+                    'status' => 'no_interaction',
+                    'message' => 'Tento předmět teď nelze použít. V dosahu není žádné místo ani objekt, se kterým by mohl interagovat.',
+                ];
+            }
+
             $ruleCheck = $this->checkUseRule($pdo, $rule, $lat, $lon, $targetPoiId);
 
             if (($ruleCheck['success'] ?? false) === false) {
@@ -765,8 +775,8 @@ final class TreasureRepository
                 return $ruleCheck;
             }
 
-            $consumesItem = $rule ? ((int) $rule['consumes_item'] === 1) : false;
-            $effectType = $rule ? (string) $rule['effect_type'] : 'log_only';
+            $consumesItem = ((int) $rule['consumes_item'] === 1);
+            $effectType = (string) $rule['effect_type'];
 
             if ($consumesItem) {
                 $stmt = $pdo->prepare(
@@ -1122,6 +1132,8 @@ final class TreasureRepository
             $stmt = $pdo->prepare(
                 'UPDATE item_instances
                  SET state = :state,
+                     owner_player_id = NULL,
+                     owner_team_id = NULL,
                      current_lat = :lat,
                      current_lon = :lon,
                      accuracy_m = :accuracy_m,

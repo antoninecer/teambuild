@@ -1494,7 +1494,7 @@
             const loc = currentLocationPayload();
             if (!loc) return;
             apiJson('/api/player/item/use', { item_instance_id: itemInstanceId, ...loc }).then(data => {
-                if (!data.success) { alert(itemActionError(data.status || data.error)); return; }
+                if (!data.success) { alert(data.message || itemActionError(data.status || data.error)); return; }
                 alert(data.consumes_item ? 'Předmět byl použit a spotřebován.' : 'Předmět byl použit.');
                 loadBookData();
                 reloadMapData();
@@ -1519,7 +1519,7 @@
         }
 
         function itemActionError(status) {
-            const errors = { not_found: 'Předmět nebyl nalezen.', forbidden: 'K tomuto předmětu nemáš oprávnění.', not_carried: 'Tento předmět teď nemáš u sebe.', not_on_map: 'Tento předmět neleží na mapě.', too_far: 'Jsi od předmětu příliš daleko.', drop_not_allowed: 'Tento předmět nelze odložit.', public_drop_not_allowed: 'Tento předmět nelze položit veřejně.', hidden_drop_not_allowed: 'Tento předmět nelze skrýt.', target_poi_required: 'Tento předmět lze použít jen u konkrétního místa.', rule_missing_coordinates: 'Pravidlo použití nemá nastavené souřadnice.' };
+            const errors = { not_found: 'Předmět nebyl nalezen.', forbidden: 'K tomuto předmětu nemáš oprávnění.', not_carried: 'Tento předmět teď nemáš u sebe.', not_on_map: 'Tento předmět neleží na mapě.', too_far: 'Jsi od předmětu příliš daleko.', drop_not_allowed: 'Tento předmět nelze odložit.', public_drop_not_allowed: 'Tento předmět nelze položit veřejně.', hidden_drop_not_allowed: 'Tento předmět nelze skrýt.', no_interaction: 'Tento předmět teď nelze použít. V dosahu není žádné místo ani objekt, se kterým by mohl interagovat.', target_poi_required: 'Tento předmět lze použít jen u konkrétního místa.', target_poi_not_found: 'Cílové místo pro použití nebylo nalezeno.', rule_missing_coordinates: 'Pravidlo použití nemá nastavené souřadnice.' };
             return errors[status] || 'Akce se nepodařila dokončit.';
         }
         reloadMapData();
