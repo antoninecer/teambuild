@@ -531,77 +531,8 @@ final class TreasureRepository
         $pdo = Database::connection();
         $limit = max(1, min(200, $limit));
 
-        $params = [
-            'game_id' => $gameId,
-            'player_id' => $playerId,
-        ];
-        if ($teamId !== null) {
-            $params['team_id'] = $teamId;
-        }
-
-        $teamFilter = $teamId !== null ? 'OR e.team_id = :team_id' : '';
-        $stmt = $pdo->prepare(
-            'SELECT
-                e.id,
-                e.event_type,
-                e.payload_json,
-                e.created_at,
-                p.id AS poi_id,
-                p.name AS poi_name,
-                p.type AS poi_type,
-                p.description AS poi_description,
-                p.story_text AS poi_story_text,
-                p.completion_text AS poi_completion_text,
-                pl.nickname AS player_nickname
-             FROM events e
-             INNER JOIN pois p ON p.id = e.poi_id
-             LEFT JOIN players pl ON pl.id = e.player_id
-             WHERE e.game_id = :game_id
-               AND e.event_type = \'poi_visited\'
-               AND (
-                    e.player_id = :player_id
-                    ' . $teamFilter . '
-               )
-             ORDER BY e.created_at DESC, e.id DESC
-             LIMIT ' . $limit
-        );
-        $stmt->execute($params);
-        $poiRows = $stmt->fetchAll() ?: [];
-
-        $teamFilterClaims = $teamId !== null ? 'OR tc.team_id = :team_id' : '';
-        $stmt = $pdo->prepare(
-            'SELECT
-                tc.id,
-                tc.claimed_at AS created_at,
-                t.id AS treasure_id,
-                t.name AS treasure_name,
-                t.description AS treasure_description,
-                t.reward_text AS treasure_reward_text,
-                t.points,
-                t.finds_mode,
-                poi.id AS poi_id,
-                poi.name AS poi_name,
-                poi.story_text AS poi_story_text,
-                poi.completion_text AS poi_completion_text,
-                pl.nickname AS player_nickname
-             FROM treasure_claims tc
-             INNER JOIN treasures t ON t.id = tc.treasure_id
-             LEFT JOIN pois poi ON poi.id = t.poi_id
-             LEFT JOIN players pl ON pl.id = tc.player_id
-             WHERE t.game_id = :game_id
-               AND (
-                    tc.player_id = :player_id
-                    ' . $teamFilterClaims . '
-               )
-             ORDER BY tc.claimed_at DESC, tc.id DESC
-             LIMIT ' . $limit
-        );
-        $stmt->execute($params);
-        $claimRows = $stmt->fetchAll() ?: [];
-
-        $teamFilterItems = $teamId !== null ? 'OR ie.team_id = :team_id' : '';
-        $stmt = $pdo->prepare(
-            'SELECT
+        $sql = '
+            SELECT
                 ie.id,
                 ie.event_type,
                 ie.note,
@@ -614,117 +545,42 @@ final class TreasureRepository
                 ii.visibility,
                 t.id AS treasure_id,
                 t.name AS treasure_name,
-                t.description AS treasure_description,
-                t.reward_text AS treasure_reward_text,
                 p.nickname AS player_nickname
-             FROM item_events ie
-             INNER JOIN item_instances ii ON ii.id = ie.item_instance_id
-             INNER JOIN treasures t ON t.id = ie.treasure_id
-             LEFT JOIN players p ON p.id = ie.player_id
-             WHERE ie.game_id = :game_id
-               AND (
+            FROM item_events ie
+            INNER JOIN item_instances ii ON ii.id = ie.item_instance_id
+            INNER JOIN treasures t ON t.id = ie.treasure_id
+            LEFT JOIN players p ON p.id = ie.player_id
+            WHERE ie.game_id = :game_id
+              AND (
                     ie.player_id = :player_id
-                    ' . $teamFilterItems . '
-               )
-             ORDER BY ie.created_at DESC, ie.id DESC
-             LIMIT ' . $limit
-        );
+                    ' . ($teamId !== null ? 'OR ie.team_id = :team_id' : '') . '
+                  )
+            ORDER BY ie.created_at DESC, ie.id DESC
+            LIMIT ' . $limit;
+
+        $stmt = $pdo->prepare($sql);
+        $params = [
+            'game_id' => $gameId,
+            'player_id' => $playerId,
+        ];
+        if ($teamId !== null) {
+            $params['team_id'] = $teamId;
+        }
         $stmt->execute($params);
-        $itemRows = $stmt->fetchAll() ?: [];
 
-        $events = [];
-
-        foreach ($poiRows as $row) {
-            $payload = $this->decodeJson($row['payload_json'] ?? null);
-            $detailParts = array_filter([
-                $row['poi_story_text'] ?? null,
-                $row['poi_completion_text'] ?? null,
-            ], static fn($value): bool => is_string($value) && trim($value) !== '');
-
-            $events[] = [
-                'id' => 'poi-' . (int) $row['id'],
-                'event_type' => 'poi_visited',
-                'category' => 'poi',
-                'title' => (string) ($row['poi_name'] ?? 'Navštívené místo'),
-                'treasure_name' => (string) ($row['poi_name'] ?? 'Navštívené místo'),
-                'poi_id' => isset($row['poi_id']) ? (int) $row['poi_id'] : null,
-                'poi_name' => $row['poi_name'] ?? null,
-                'poi_type' => $row['poi_type'] ?? null,
-                'note' => implode("\n\n", $detailParts),
-                'created_at' => $row['created_at'],
-                'player_nickname' => $row['player_nickname'] ?? null,
-                'lat' => isset($payload['lat']) ? (float) $payload['lat'] : null,
-                'lon' => isset($payload['lon']) ? (float) $payload['lon'] : null,
-                'accuracy_m' => isset($payload['accuracy']) ? (float) $payload['accuracy'] : null,
-                'payload' => $payload,
-            ];
+        $rows = $stmt->fetchAll() ?: [];
+        foreach ($rows as &$row) {
+            $row['id'] = (int) $row['id'];
+            $row['treasure_id'] = (int) $row['treasure_id'];
+            $row['lat'] = $row['lat'] !== null ? (float) $row['lat'] : null;
+            $row['lon'] = $row['lon'] !== null ? (float) $row['lon'] : null;
+            $row['accuracy_m'] = $row['accuracy_m'] !== null ? (float) $row['accuracy_m'] : null;
+            $row['payload'] = $this->decodeJson($row['payload_json'] ?? null);
+            unset($row['payload_json']);
         }
+        unset($row);
 
-        foreach ($claimRows as $row) {
-            $detailParts = array_filter([
-                $row['treasure_description'] ?? null,
-                $row['treasure_reward_text'] ?? null,
-                $row['poi_name'] ? 'Navázáno na místo: ' . $row['poi_name'] : null,
-            ], static fn($value): bool => is_string($value) && trim($value) !== '');
-
-            $events[] = [
-                'id' => 'treasure-' . (int) $row['id'],
-                'event_type' => 'treasure_claimed',
-                'category' => 'treasure',
-                'title' => (string) ($row['treasure_name'] ?? 'Sebraný poklad'),
-                'treasure_id' => isset($row['treasure_id']) ? (int) $row['treasure_id'] : null,
-                'treasure_name' => $row['treasure_name'] ?? null,
-                'poi_id' => isset($row['poi_id']) ? (int) $row['poi_id'] : null,
-                'poi_name' => $row['poi_name'] ?? null,
-                'points' => isset($row['points']) ? (int) $row['points'] : 0,
-                'finds_mode' => $row['finds_mode'] ?? null,
-                'note' => implode("\n\n", $detailParts),
-                'created_at' => $row['created_at'],
-                'player_nickname' => $row['player_nickname'] ?? null,
-                'lat' => null,
-                'lon' => null,
-                'accuracy_m' => null,
-                'payload' => [],
-            ];
-        }
-
-        foreach ($itemRows as $row) {
-            $payload = $this->decodeJson($row['payload_json'] ?? null);
-            $noteParts = array_filter([
-                $row['note'] ?? null,
-                $row['treasure_description'] ?? null,
-                $row['treasure_reward_text'] ?? null,
-            ], static fn($value): bool => is_string($value) && trim($value) !== '');
-
-            $events[] = [
-                'id' => 'item-' . (int) $row['id'],
-                'event_type' => $row['event_type'] ?? 'item_event',
-                'category' => 'item',
-                'title' => (string) ($row['treasure_name'] ?? 'Předmět'),
-                'treasure_id' => isset($row['treasure_id']) ? (int) $row['treasure_id'] : null,
-                'treasure_name' => $row['treasure_name'] ?? null,
-                'note' => implode("\n\n", $noteParts),
-                'created_at' => $row['created_at'],
-                'player_nickname' => $row['player_nickname'] ?? null,
-                'lat' => $row['lat'] !== null ? (float) $row['lat'] : null,
-                'lon' => $row['lon'] !== null ? (float) $row['lon'] : null,
-                'accuracy_m' => $row['accuracy_m'] !== null ? (float) $row['accuracy_m'] : null,
-                'state' => $row['state'] ?? null,
-                'visibility' => $row['visibility'] ?? null,
-                'payload' => $payload,
-            ];
-        }
-
-        usort($events, static function (array $a, array $b): int {
-            $timeCompare = strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? ''));
-            if ($timeCompare !== 0) {
-                return $timeCompare;
-            }
-
-            return strcmp((string) ($b['id'] ?? ''), (string) ($a['id'] ?? ''));
-        });
-
-        return array_slice($events, 0, $limit);
+        return $rows;
     }
 
     public function dropItem(

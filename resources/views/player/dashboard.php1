@@ -20,6 +20,30 @@
             z-index: 1;
         }
 
+        .locate-control {
+            position: absolute;
+            right: 14px;
+            bottom: 92px;
+            z-index: 1000;
+            width: 54px;
+            height: 54px;
+            border: 0;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.92);
+            color: #1565c0;
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.22);
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .locate-control:active {
+            transform: translateY(1px);
+            background: #e3f2fd;
+        }
+
         .ui-overlay {
             position: absolute;
             top: 10px;
@@ -563,6 +587,15 @@
                 padding: 9px 10px;
             }
 
+            .locate-control {
+                right: 12px;
+                bottom: 86px;
+                width: 50px;
+                height: 50px;
+                border-radius: 16px;
+                font-size: 24px;
+            }
+
             .player-card-grid,
             .results-summary {
                 grid-template-columns: 1fr 1fr;
@@ -576,6 +609,8 @@
 </head>
 <body>
     <?php require __DIR__ . '/partials/map_shell.php'; ?>
+
+    <button id="locateMeBtn" class="locate-control" type="button" onclick="centerOnPlayer(true)" title="Vycentrovat na moji polohu" aria-label="Vycentrovat mapu na moji polohu">⌖</button>
 
     <?php require __DIR__ . '/partials/player_modal.php'; ?>
 
@@ -615,6 +650,10 @@
         let userMarker = null;
         let userCircle = null;
         let lastPos = null;
+        const mapViewStorageKey = 'teambuild:lastMapView:' + gameSlug;
+        let mapViewRestored = false;
+        let mapViewRestoreUntil = 0;
+        let suppressMapViewSave = false;
 
         let poiMarkers = [];
         let treasureMarkers = [];
@@ -649,6 +688,69 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         }
+
+        function rememberMapView() {
+            try {
+                const center = map.getCenter();
+                sessionStorage.setItem(mapViewStorageKey, JSON.stringify({
+                    lat: center.lat,
+                    lon: center.lng,
+                    zoom: map.getZoom(),
+                    saved_at: Date.now()
+                }));
+            } catch (e) {
+                console.warn('Nepodařilo se uložit pohled mapy', e);
+            }
+        }
+
+        function restoreRememberedMapView() {
+            try {
+                const raw = sessionStorage.getItem(mapViewStorageKey);
+                if (!raw) {
+                    return false;
+                }
+
+                const stored = JSON.parse(raw);
+                const lat = Number(stored.lat);
+                const lon = Number(stored.lon);
+                const zoom = Number(stored.zoom || mapZoom);
+
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                    return false;
+                }
+
+                suppressMapViewSave = true;
+                map.setView([lat, lon], Number.isFinite(zoom) ? zoom : mapZoom, { animate: false });
+                suppressMapViewSave = false;
+                mapViewRestored = true;
+                mapViewRestoreUntil = Date.now() + 8000;
+                setTimeout(() => map.invalidateSize(), 80);
+                return true;
+            } catch (e) {
+                console.warn('Nepodařilo se obnovit pohled mapy', e);
+                return false;
+            }
+        }
+
+        function centerOnPlayer(forceZoom) {
+            if (!lastPos) {
+                alert('Nejdřív potřebuji znát tvoji polohu.');
+                return;
+            }
+
+            const zoom = forceZoom ? Math.max(map.getZoom(), 17) : map.getZoom();
+            map.setView([lastPos.lat, lastPos.lon], zoom, { animate: true });
+            mapViewRestored = false;
+            rememberMapView();
+        }
+
+        map.on('moveend zoomend', () => {
+            if (!suppressMapViewSave) {
+                rememberMapView();
+            }
+        });
+
+        restoreRememberedMapView();
 
         function normalizeYoutubeUrl(url) {
             if (!url) {
@@ -768,7 +870,9 @@
                 });
                 userMarker = L.marker([lat, lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
                 userCircle = L.circle([lat, lon], { radius: acc, fillOpacity: 0.1 }).addTo(map);
-                map.setView([lat, lon], 16);
+                if (!mapViewRestored || Date.now() > mapViewRestoreUntil) {
+                    map.setView([lat, lon], 16);
+                }
             } else {
                 userMarker.setLatLng([lat, lon]);
                 userCircle.setLatLng([lat, lon]);
@@ -1146,7 +1250,8 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Poklad byl úspěšně sebrán. Stránka se teď obnoví, aby se správně přepočítaly body i výsledovka.');
+                    rememberMapView();
+                    alert('Poklad byl úspěšně sebrán. Vrátím tě zpět na stejné místo v mapě.');
                     closePoiModal();
                     window.location.reload();
                     return;
@@ -1336,13 +1441,14 @@
                     return;
                 }
 
+                rememberMapView();
                 closePoiModal();
 
                 if (Array.isArray(data.unlocked_treasures) && data.unlocked_treasures.length > 0) {
                     const names = data.unlocked_treasures.map(item => item.name || 'Poklad').join(', ');
-                    alert('Průzkum dokončen. Odemčeno: ' + names + '. Stránka se teď obnoví.');
+                    alert('Průzkum dokončen. Odemčeno: ' + names + '. Vrátím tě zpět na stejné místo v mapě.');
                 } else {
-                    alert('Průzkum místa byl potvrzen. Stránka se teď obnoví, aby se správně propsal stav hry.');
+                    alert('Průzkum místa byl potvrzen. Vrátím tě zpět na stejné místo v mapě.');
                 }
 
                 window.location.reload();
@@ -1530,64 +1636,17 @@
             const container = document.getElementById('bookJournalList');
             container.innerHTML = '';
             if (!events.length) {
-                container.innerHTML = '<div class="book-empty">Deník cesty je zatím prázdný. Jakmile navštívíš POI nebo sebereš poklad, objeví se tady záznam.</div>';
+                container.innerHTML = '<div class="book-empty">Deník předmětů je zatím prázdný.</div>';
                 return;
             }
-
-            const labels = {
-                poi_visited: 'Navštívené POI',
-                treasure_claimed: 'Sebraná značka / poklad',
-                claimed: 'Sebráno do inventáře',
-                picked: 'Sebráno do inventáře',
-                dropped: 'Položeno na mapu',
-                hidden: 'Skryto na mapě',
-                picked_from_map: 'Sebráno z mapy',
-                used: 'Použito',
-                consumed: 'Použito a spotřebováno',
-                message_sent: 'Odeslána stopa',
-                created: 'Vytvořeno'
-            };
-
+            const labels = { claimed: 'Sebráno do inventáře', dropped: 'Položeno na mapu', hidden: 'Skryto na mapě', picked_from_map: 'Sebráno z mapy', used: 'Použito', consumed: 'Použito a spotřebováno', message_sent: 'Odeslána stopa', created: 'Vytvořeno' };
             events.forEach(event => {
                 const card = document.createElement('div');
-                card.className = 'book-card journal-card';
-                card.tabIndex = 0;
-
+                card.className = 'book-card';
                 const label = labels[event.event_type] || event.event_type || 'Událost';
-                const title = event.title || event.treasure_name || event.poi_name || 'Záznam deníku';
-                const points = Number(event.points || 0);
-                const metaParts = [formatDateTime(event.created_at)];
-                if (event.player_nickname) metaParts.push(event.player_nickname);
-                if (event.category === 'poi') metaParts.push('místo navštíveno');
-                if (event.category === 'treasure') metaParts.push('značka / poklad sebrán');
-                if (points > 0) metaParts.push(points + ' bodů');
-                if (event.poi_name && event.poi_name !== title) metaParts.push(event.poi_name);
-
-                const detail = String(event.note || '').trim();
-                const detailHtml = detail
-                    ? '<div class="book-card-body journal-detail" style="display:none">' + escapeHtml(detail).replace(/\n/g, '<br>') + '</div>'
-                    : '<div class="book-card-body journal-detail" style="display:none">K tomuto záznamu není uložený delší text.</div>';
-
-                card.innerHTML = '<div class="book-card-title">' + escapeHtml(label) + ': ' + escapeHtml(title) + '</div>'
-                    + '<div class="book-card-meta">' + escapeHtml(metaParts.filter(Boolean).join(' • ')) + '</div>'
-                    + '<div class="book-card-hint">Klepni pro zobrazení původního textu, indicie nebo odměny.</div>'
-                    + detailHtml;
-
-                const toggle = function () {
-                    const detailEl = card.querySelector('.journal-detail');
-                    if (!detailEl) return;
-                    const isOpen = detailEl.style.display !== 'none';
-                    detailEl.style.display = isOpen ? 'none' : 'block';
-                    card.classList.toggle('open', !isOpen);
-                };
-                card.addEventListener('click', toggle);
-                card.addEventListener('keydown', function (event) {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        toggle();
-                    }
-                });
-
+                card.innerHTML = '<div class="book-card-title">' + escapeHtml(label) + ': ' + escapeHtml(event.treasure_name || 'Předmět') + '</div>'
+                    + '<div class="book-card-meta">' + escapeHtml(formatDateTime(event.created_at)) + (event.player_nickname ? ' • ' + escapeHtml(event.player_nickname) : '') + '</div>'
+                    + '<div class="book-card-body">' + escapeHtml(event.note || '') + '</div>';
                 container.appendChild(card);
             });
         }
